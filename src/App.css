@@ -1,0 +1,35 @@
+.dashboard-container {
+  display: grid;
+  /* Columns: Left is 1.5 parts, Right is 1 part */
+  grid-template-columns: 1.5fr 1fr;
+  /* Rows: Top and Bottom */
+  grid-template-rows: 1fr 1fr;
+  gap: 20px;
+  height: 100vh;
+  padding: 20px;
+  background-color: #f4f7f4; /* Subtle garden green tint */
+  box-sizing: border-box;
+}
+
+.section {
+  background: white;
+  padding: 20px;
+  border-radius:12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  border: 1px solid #e0e0e0;
+}
+
+/* Specific styling for the Weather section to feel smaller if needed */
+.weather-forecast {
+  background-color: #e3f2fd; /* Light blue for weather */
+}
+
+.plant-list {
+  border-left: 5px solid #4caf50;
+}
+
+h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  color: #2e7d32;
+}
