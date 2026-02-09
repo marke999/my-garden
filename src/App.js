@@ -39,6 +39,13 @@ function App() {
         <table>
           <thead>
             <tr>
+              <th>Last Watered</th>
+              <th>Pest Check</th>
+              <th>Wilting?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
               <td>February 9, 2026</td>
               <td>None</td>
               <td>None</td>
@@ -83,8 +90,9 @@ function App() {
               <tr key={day}>
                 <td>{day}</td>
                 <td>22 C</td>
-                <td>10%<td>
+                <td>10%</td>
                 <td>12km/h</td>
+              </tr>
             ))}
           </tbody>
         </table>
