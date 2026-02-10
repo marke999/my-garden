@@ -3,9 +3,9 @@
   /* Columns: Left is 1.5 parts, Right is 1 part */
   grid-template-columns: 1.5fr 1fr;
   /* Rows: Top and Bottom */
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: 0.6fr 1.4fr;
   column-gap: 20px;
-  row-gap: 0;
+  row-gap: 20px;
   height: 100vh;
   padding: 20px;
   background-color: #f4f7f4; /* Subtle garden green tint */
