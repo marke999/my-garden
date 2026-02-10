@@ -77,14 +77,14 @@ th {
 .plant-status table td:nth-child(1),
 .weather-forecast table th:nth-child(1),
 .weather-forecast table td:nth-child(1) {
-  width: 25% /* Match "Last Watered width with "Day" */
+  width: 25%; /* Match "Last Watered width with "Day" */
 }
 
 .plant-status table th,
 .plant-status table td,
 .weather-forecast table th,
 .weather-forecast table td {
-  width: 25% /* Equal width for all columns in right sections */
+  width: 25%; /* Equal width for all columns in right sections */
 }
 
 /* Make sure the scrollbar looks clean */
