@@ -78,7 +78,7 @@ function App() {
       {/* Lower Right: Weather Forecast (0.5/4 width) */}
       <div className="section weather-forecast">
         <h2>7-Day Forecast</h2>
-        <div className-"table-container">
+        <div className="table-container">
           <table>
             <thead>
               <tr>
