@@ -17,7 +17,7 @@
   padding: 20px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   border: 1px solid #e0e0e0;
-  overflor: auto;
+  overflow: auto;
 }
 
 /* TOP LEFT & TOP RIGHT sections */
@@ -142,18 +142,19 @@ th {
     margin-bottom: 10px;
     white-space: nowrap; /* Prevent heading from wrapping */
     overflow: hidden;
-    text-overflow: ellipsis /* Add ... if text is too long */
+    text-overflow: ellipsis; /* Add ... if text is too long */
   }
 
   table {
     font-size: 0.7rem;
     table-layout: auto; /* Allow table to determine its own width on mobile */
-    min-with: 100%; /* Ensure table takes at least full width */
+    min-width: 100%; /* Ensure table takes at least full width */
   }
 
-  th, td{
+  th, td {
     padding: 6px;
     white-space: nowrap; /* Keep text on one line */
+  }
 
   th {
     font-size: 0.6rem;
