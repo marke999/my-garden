@@ -13,7 +13,7 @@ function App() {
               <tr>
                 <th>Plant Name</th>
                 <th>Scientific Name</th>
-                <th>Picture<th>
+                <th>Picture</th>
                 <th>Zone</th>
                 <th>Sunlight</th>
                 <th>Watering</th>
