@@ -3,7 +3,7 @@
   /* Columns: Left is 1.5 parts, Right is 1 part */
   grid-template-columns: 1.5fr 1fr;
   /* Rows: Top and Bottom */
-  grid-template-rows: 0.6fr 1.4fr;
+  grid-template-rows: 1.4fr 0.6fr;
   column-gap: 20px;
   row-gap: 20px;
   height: 100vh;

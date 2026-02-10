@@ -13,6 +13,7 @@ function App() {
               <tr>
                 <th>Plant Name</th>
                 <th>Scientific Name</th>
+                <th>Picture<th>
                 <th>Zone</th>
                 <th>Sunlight</th>
                 <th>Watering</th>
@@ -23,6 +24,7 @@ function App() {
               <tr>
                 <td>Snake Plant</td>
                 <td>Dracaena trifasciata</td>
+                <td>Pic here</td>
                 <td>9-12</td>
                 <td>Low to Bright</td>
                 <td>Every 2 weeks</td>
@@ -43,6 +45,7 @@ function App() {
                 <th>Last Watered</th>
                 <th>Pest Check</th>
                 <th>Wilting?</th>
+                <th>Health Status</th>
               </tr>
             </thead>
             <tbody>
@@ -50,6 +53,7 @@ function App() {
                 <td>February 9, 2026</td>
                 <td>None</td>
                 <td>None</td>
+                <td>Healthy</td>
               </tr>
             </tbody>
           </table>
