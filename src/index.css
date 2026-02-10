@@ -55,6 +55,7 @@ th, td {
   text-align: left;
   padding: 10px;
   border-bottom: 1px solid #eee;
+  white-space: nowrap; /* Prevent text wrapping */
 }
 
 th {
@@ -137,16 +138,31 @@ th {
   }
 
   h2 {
-    font-size: 1rem;
-    margin-bottom: 12px;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    white-space: nowrap; /* Prevent heading from wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis /* Add ... if text is too long */
   }
 
   table {
     font-size: 0.7rem;
+    table-layout: auto; /* Allow table to determine its own width on mobile */
+    min-with: 100%; /* Ensure table takes at least full width */
   }
 
   th, td{
     padding: 6px;
+    white-space: nowrap; /* Keep text on one line */
+
+  th {
+    font-size: 0.6rem;
+  }
+
+  /* Make table container scrollable */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   }
 }
 
@@ -162,5 +178,3 @@ th {
     font-size: 0.8rem;
   }
 }
-
-
