@@ -30,7 +30,9 @@
 
 h2 {
   margin-top: 0;
+  margin-bottom: 16px; /* Fixed margin to align all h2 elements */
   font-size: 1.2rem;
+  line-height: 1.2rem; /* Fixed line height for consistent spacing */
   color: #2e7d32;
 }
 
@@ -45,6 +47,7 @@ table {
   border-collapse: collapse;
   margin-top: 10px;
   font-size: 0.85rem;
+  table-layout: fixed; /* This ensures columns follow specified widths */
 }
 
 th, td {
@@ -59,6 +62,29 @@ th {
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.75rem;
+}
+
+/* Align Plant List columns with */
+.plant-list table th:nth-child(1),
+.plant-list table td:nth-child(1),
+.garden-progress table th:nth-child(1),
+.garden-progress table td:nth-child(1) {
+  width: 16.67%; /* Match "Plant Name" width with "Date" */
+}
+
+/* Align Plant Status columns with Weather Forecast */
+.plant-status table th:nth-child(1),
+.plant-status table td:nth-child(1),
+.weather-forecast table th:nth-child(1),
+.weather-forecast table td:nth-child(1) {
+  width: 25% /* Match "Last Watered width with "Day" */
+}
+
+.plant-status table th,
+.plant-status table td,
+.weather-forecast table th,
+.weather-forecast table td {
+  width: 25% /* Equal width for all columns in right sections */
 }
 
 /* Make sure the scrollbar looks clean */
