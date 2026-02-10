@@ -101,7 +101,7 @@ th {
 @media (max-width: 768px) {
   .dashboard-container {
     grid-template-columns: 1.5fr 1fr; /* Keep 2 columns for Plant List and Plant Status */
-    grid-template-rows: auto auto auto /* 3 rows: top row + 2 stacked bottom sections */
+    grid-template-rows: auto auto auto; /* 3 rows: top row + 2 stacked bottom sections */
     height: auto; /* Allow natural height */
     padding: 10px;
     column-gap: 10px;
