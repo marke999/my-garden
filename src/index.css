@@ -3,7 +3,7 @@
   /* Columns: Left is 1.5 parts, Right is 1 part */
   grid-template-columns: 1.5fr 1fr;
   /* Rows: Top and Bottom */
-  grid-template-rows: 2fr 0.2fr;
+  grid-template-rows: 1.4fr 0.6fr;
   column-gap: 20px;
   row-gap: 20px;
   height: 100vh;
@@ -17,6 +17,7 @@
   padding: 20px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   border: 1px solid #e0e0e0;
+  overflor: auto;
 }
 
 /* TOP LEFT & TOP RIGHT sections */
@@ -95,3 +96,71 @@ th {
   background: #ccc;
   border-radius: 10px;
 }
+
+/* MOBILE RESPONSIVE - Stack sections vertically on small screens except plant list and plant status*/
+@media (max-width: 768px) {
+  .dashboard-container {
+    grid-template-columns: 1.5fr 1fr; /* Keep 2 columns for Plant List and Plant Status */
+    grid-template-rows: auto auto auto /* 3 rows: top row + 2 stacked bottom sections */
+    height: auto; /* Allow natural height */
+    padding: 10px;
+    column-gap: 10px;
+    row-gap: 10px;
+  }
+
+  /* Plant List stays in position (row 1, col 1) */
+  .plant-list {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  /* Plant Status stays in position (row 1, col 2) */
+  .plant-status {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  /* Garden Progress spans full width on row 2 */
+  .garden-progress {
+    grid-column: 1 / -1; /* Spans both columns */
+    grid-row : 2;
+  }
+
+  /* Weather Forecast spans full width on row 3 */
+  .weather-forecast {
+    grid-column: 1 / -1; /* Span both columns */
+    grid-row: 3;
+  }
+
+  .section {
+    padding: 15px;
+  }
+
+  h2 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+
+  table {
+    font-size: 0.7rem;
+  }
+
+  th, td{
+    padding: 6px;
+  }
+}
+
+/* TABLET - Adjust for medium screens */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-container {
+    padding: 15px;
+    column-gap: 15px;
+    row-gap: 15px;
+  }
+
+  table {
+    font-size: 0.8rem;
+  }
+}
+
+
