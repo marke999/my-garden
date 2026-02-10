@@ -36,22 +36,24 @@ function App() {
       {/* Upper Right: Plant Status (1/4 width) */}
       <div className="section plant-status">
         <h2>Plant Status</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Last Watered</th>
-              <th>Pest Check</th>
-              <th>Wilting?</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>February 9, 2026</td>
-              <td>None</td>
-              <td>None</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Last Watered</th>
+                <th>Pest Check</th>
+                <th>Wilting?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>February 9, 2026</td>
+                <td>None</td>
+                <td>None</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Lower Left: Garden Progress (1/4 height/space) */}
@@ -76,26 +78,28 @@ function App() {
       {/* Lower Right: Weather Forecast (0.5/4 width) */}
       <div className="section weather-forecast">
         <h2>7-Day Forecast</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Day</th>
-              <th>Temp</th>
-              <th>Precipitation</th>
-              <th>Wind</th>
-            </tr>
-          </thead>
-          <tbody>
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-              <tr key={day}>
-                <td>{day}</td>
-                <td>22 C</td>
-                <td>10%</td>
-                <td>12km/h</td>
+        <div className-"table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>Temp</th>
+                <th>Precipitation</th>
+                <th>Wind</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <tr key={day}>
+                  <td>{day}</td>
+                  <td>22 C</td>
+                  <td>10%</td>
+                  <td>12km/h</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
