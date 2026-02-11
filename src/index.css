@@ -58,6 +58,12 @@ th, td {
   white-space: nowrap; /* Prevent text wrapping */
 }
 
+/* Increase padding for plant list to align with plant status */
+.plant-list table th,
+.plant-list table td {
+  padding: 12px 10px;
+}
+
 th {
   background-color: #fafafa;
   color: #666;
@@ -103,7 +109,7 @@ th {
   background-color: #4caf50;
   color: white;
   border: none;
-  padding: 4px 10px;
+  padding: 2px 8px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.7rem;
