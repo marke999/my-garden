@@ -39,7 +39,7 @@ function App() {
       commonName: 'Snake Plant',
       scientificName: 'Dracaena trifasciata',
       picture: 'Pic here',
-      zone: '9-12'
+      zone: '9-12',
       sunlight: 'Low to Bright',
       watering: 'Every 2 weeks',
       height: '2-3 ft'
@@ -210,7 +210,7 @@ function App() {
                     {plant.picture === 'Pic here' || plant.picture === 'No image' ? (
                       'Pic here'
                     ) : (
-                      <img src={plant.picture} alt=plant.commonName} style={{ width: '50px', height: '50px', objectFit: 'cover' }} />
+                      <img src={plant.picture} alt={plant.commonName} style={{ width: '50px', height: '50px', objectFit: 'cover' }} />
                     )}
                   </td>
                   <td>{plant.zone}</td>
