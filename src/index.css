@@ -220,6 +220,95 @@ th {
   background-color: #45a049;
 }
 
+/* Add Plant Button */
+.add-plant-btn {
+  background-color: #2e7d32;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background-color 0.3s;
+}
+
+.add-plant-btn:hover {
+  background-color: #1b5e20;
+}
+
+/* Larger modal for Add Plant */
+.modal-large {
+  max-widthL 600px;
+}
+
+/* Search Results Styling */
+.search-results {
+  margin-top: 20px;
+}
+
+.search-results h3 {
+  font-size: 1rem;
+  margin-bottom: 10px;
+  color: #2e7d32;
+}
+
+.search-result-item {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.search-result-item:hover {
+  background-color: #f0f0f0;
+}
+
+.search-result-item strong {
+  color: #2e7d32;
+}
+
+.search-result-item em {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Plant Info Section */
+.plant-info {
+  background-color: #f4f7f4;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.plant-info h3 {
+  margin: 0 0 5px 0;
+  color: #2e7d32;
+}
+
+.plant-info p {
+  margin: 0 0 10px;
+  color: #666;
+}
+
+/* Back Button */
+.btn-back {
+  background-color: #757575;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.3s;
+}
+
+.btn-back:hover {
+  background-color: #616161;
+}
+
 /* MOBILE RESPONSIVE - Stack sections vertically on small screens except plant list and plant status*/
 @media (max-width: 768px) {
   .dashboard-container {
