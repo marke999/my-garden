@@ -239,7 +239,7 @@ th {
 
 /* Larger modal for Add Plant */
 .modal-large {
-  max-widthL 600px;
+  max-width: 600px;
 }
 
 /* Search Results Styling */
