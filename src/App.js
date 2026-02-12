@@ -482,7 +482,7 @@ function App() {
                        <label>Health Status</label>
                        <select
                          value={newPlantData.healthStatus}
-                         onChange={(e) => handleNewPlantInputChange('healthStatus, e.target.value)}
+                         onChange={(e) => handleNewPlantInputChange('healthStatus', e.target.value)}
                        >
                          <option value="Healthy">Healthy</option>
                          <option value="Unhealthy">Unhealthy</option>
