@@ -84,11 +84,11 @@ function App() {
   };
 
   const handleOpenUpdateModal = () => {
-    setIsUpdateModalOpen(true);
+    setIsModalOpen(true);
   };
 
   const handleCloseUpdateModal = () => {
-    setIsUpdateModalOpen(false);
+    setIsModalOpen(false);
   };
 
   const handleOpenAddPlantModal = () => {
