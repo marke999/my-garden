@@ -171,7 +171,12 @@ function App() {
       picture: selectedPlant.default_image?.thumbnail || 'No image',
       zone: selectedPlant.hardiness?.min && selectedPlant.hardiness?.max
        ? `${selectedPlant.hardiness.min}-${selectedPlant.hardiness.max}`
-       : 'N/A'
+       : 'N/A',
+      sunlight: selectedPlant.sunlight?.join(', ') || 'N/A',
+      watering: selectedPlant.watering || 'N/A',
+      height: selectedPlant.dimension?.max_value
+        ? `Up to ${selectedPlant.dimension.max_value} ${selectedPlant.dimension.unit}`
+        : 'N/A'
     };
 
     setPlantList([...plantList, newPlant]);
@@ -241,7 +246,7 @@ function App() {
             </thead>
             <tbody>
               <tr>
-                <td><button className="update-btn" onClick={handleOpenModal}>Update</button></td>
+                <td><button className="update-btn" onClick={handleOpenUpdateModal}>Update</button></td>
                 <td>{plantStatus.lastWatered}</td>
                 <td>{plantStatus.pestCheck}</td>
                 <td>{plantStatus.wilting}</td>
@@ -311,7 +316,7 @@ function App() {
 
       {/* Update Plant Status Modal */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
+        <div className="modal-overlay" onClick={handleCloseUpdateModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Update Plant Status</h2>
 
@@ -375,7 +380,7 @@ function App() {
             </div>
 
             <div className="modal-buttons">
-              <button className="btn-cancel" onClick={handleCloseModal}>
+              <button className="btn-cancel" onClick={handleCloseUpdateModal}>
                 Cancel
               </button>
               <button className="btn-submit" onClick={handleSubmit}>
@@ -493,7 +498,7 @@ function App() {
                        <label>Latest Photo</label>
                        <input
                          type="file"
-                         accept={"image/&#42"}
+                         accept={"image/&#42;"}
                          capture="environment"
                          onChange={handleNewPlantPhotoUpload}
                        />
