@@ -166,15 +166,15 @@ function App() {
     }
 
     const newPlant = {
-      commonName: selected.Plant.common_name || 'Unknown',
+      commonName: selectedPlant.common_name || 'Unknown',
       scientificName: selectedPlant.scientific_name?.[0] || 'Unknown',
       picture: selectedPlant.default_image?.thumbnail || 'No image',
       zone: selectedPlant.hardiness?.min && selectedPlant.hardiness?.max
-       ? `$(selectedPlant.hardiness.min|-${selectedPlant.hardiness.max}`
+       ? `${selectedPlant.hardiness.min}-${selectedPlant.hardiness.max}`
        : 'N/A'
     };
 
-    setPlantList[(...plantList, newPlant]);
+    setPlantList([...plantList, newPlant]);
     handleCloseAddPlantModal();
   };
 
@@ -435,14 +435,14 @@ function App() {
               </>
             ) : (
               <>
-                {isLoadingDetail ? (
+                {isLoadingDetails ? (
                   <p>Loading plant details...</p>
                 ) : (
                   <>
                     <div className="plant-info">
-                       <h3>{selected.Plant.common_name}</h3>
+                       <h3>{selectedPlant.common_name}</h3>
                        <p><em>{selectedPlant.scientific_name?.[0]}</em></p>
-                       <button className="btn-back onClick={() => setSelectedPlant(null)}>
+                       <button className="btn-back" onClick={() => setSelectedPlant(null)}>
                          ← Back to Search
                        </button>
                      </div>
@@ -482,7 +482,7 @@ function App() {
                        <label>Health Status</label>
                        <select
                          value={newPlantData.healthStatus}
-                         onChange={(e) => handleNewPlantInputChange('healthStatus;, e.target.lvalue)}
+                         onChange={(e) => handleNewPlantInputChange('healthStatus;, e.target.value)}
                        >
                          <option value="Healthy">Healthy</option>
                          <option value="Unhealthy">Unhealthy</option>
