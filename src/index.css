@@ -3,9 +3,9 @@
   /* Columns: Left is 1.5 parts, Right is 1 part */
   grid-template-columns: 1.5fr 1fr;
   /* Rows: Top and Bottom */
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: 1.4fr 0.6fr;
   column-gap: 20px;
-  row-gap: 0;
+  row-gap: 20px;
   height: 100vh;
   padding: 20px;
   background-color: #f4f7f4; /* Subtle garden green tint */
@@ -17,6 +17,7 @@
   padding: 20px;
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
   border: 1px solid #e0e0e0;
+  overflow: auto;
 }
 
 /* TOP LEFT & TOP RIGHT sections */
@@ -54,12 +55,7 @@ th, td {
   text-align: left;
   padding: 10px;
   border-bottom: 1px solid #eee;
-}
-
-/* Adjust padding for plant list to align rows with plant status */
-.plant-list table th,
-.plant-list table td {
-  padding: 10px;
+  white-space: nowrap; /* Prevent text wrapping */
 }
 
 th {
@@ -70,7 +66,7 @@ th {
   font-size: 0.75rem;
 }
 
-/* Align Plant List columns with Garden Progress */
+/* Align Plant List columns with */
 .plant-list table th:nth-child(1),
 .plant-list table td:nth-child(1),
 .garden-progress table th:nth-child(1),
@@ -83,7 +79,7 @@ th {
 .plant-status table td:nth-child(1),
 .weather-forecast table th:nth-child(1),
 .weather-forecast table td:nth-child(1) {
-  width: 25%; /* Match "Last Watered" width with "Day" */
+  width: 25%; /* Match "Last Watered width with "Day" */
 }
 
 .plant-status table th,
@@ -97,13 +93,12 @@ th {
 .table-container::-webkit-scrollbar {
   height: 6px;
 }
-
 .table-container::-webkit-scrollbar-thumb {
   background: #ccc;
   border-radius: 10px;
 }
 
-/* Update Button Styling */
+/* Update Button Styling - bold underlined text */
 .update-btn {
   background: none;
   color: inherit;
@@ -128,7 +123,7 @@ th {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0,0,0,0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -144,7 +139,7 @@ th {
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 
 .modal-content h2 {
@@ -219,7 +214,7 @@ th {
   background-color: #45a049;
 }
 
-/* Add Plant Button */
+/* Add Plant Button - plain text style */
 .add-plant-btn {
   background: none;
   color: inherit;
@@ -307,4 +302,86 @@ th {
 
 .btn-back:hover {
   background-color: #616161;
+}
+
+/* MOBILE RESPONSIVE - Stack sections vertically on small screens except plant list and plant status*/
+@media (max-width: 768px) {
+  .dashboard-container {
+    grid-template-columns: 1.5fr 1fr; /* Keep 2 columns for Plant List and Plant Status */
+    grid-template-rows: auto auto auto; /* 3 rows: top row + 2 stacked bottom sections */
+    height: auto; /* Allow natural height */
+    padding: 10px;
+    column-gap: 10px;
+    row-gap: 10px;
+  }
+
+  /* Plant List stays in position (row 1, col 1) */
+  .plant-list {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  /* Plant Status stays in position (row 1, col 2) */
+  .plant-status {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  /* Garden Progress spans full width on row 2 */
+  .garden-progress {
+    grid-column: 1 / -1; /* Spans both columns */
+    grid-row : 2;
+  }
+
+  /* Weather Forecast spans full width on row 3 */
+  .weather-forecast {
+    grid-column: 1 / -1; /* Span both columns */
+    grid-row: 3;
+  }
+
+  .section {
+    padding: 15px;
+  }
+
+  h2 {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    white-space: nowrap; /* Prevent heading from wrapping */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Add ... if text is too long */
+  }
+
+  table {
+    font-size: 0.7rem;
+    table-layout: auto; /* Allow table to determine its own width on mobile */
+    min-width: 100%; /* Ensure table takes at least full width */
+  }
+
+  th, td {
+    padding: 6px;
+    white-space: nowrap; /* Keep text on one line */
+  }
+
+  th {
+    font-size: 0.6rem;
+  }
+
+  /* Make table container scrollable */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+}
+
+/* TABLET - Adjust for medium screens */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-container {
+    padding: 15px;
+    column-gap: 15px;
+    row-gap: 15px;
+  }
+
+  table {
+    font-size: 0.8rem;
+  }
 }
