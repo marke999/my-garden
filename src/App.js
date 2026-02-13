@@ -4,6 +4,7 @@ import './index.css';
 function App() {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isAddPlantModalOpen, setIsAddPlantModalOpen] = useState(false);
+  const [isManualEntry, setIsManualEntry] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedPlant, setSelectedPlant] = useState(null);
@@ -25,6 +26,21 @@ function App() {
     wilting: 'None',
     healthStatus: 'Healthy',
     photo: null
+  });
+
+  const [manualPlantData, setManualPlantData] = useState({
+    commonName: '',
+    scientificName: '',
+    zone: '',
+    sunlight: '',
+    watering: '',
+    height: '',
+    picture: null,
+    lastWatered: '',
+    pestCheck: 'None',
+    wilting: 'None',
+    healthStatus: 'Healthy',
+    statusPhoto: null
   });
 
   const [plantList, setPlantList] = useState([
@@ -106,6 +122,7 @@ function App() {
 
   const handleOpenAddPlantModal = () => {
     setIsAddPlantModalOpen(true);
+    setIsManualEntry(false);
     setSearchQuery('');
     setSearchResults([]);
     setSelectedPlant(null);
@@ -113,6 +130,7 @@ function App() {
 
   const handleCloseAddPlantModal = () => {
     setIsAddPlantModalOpen(false);
+    setIsManualEntry(false);
     setSearchQuery('');
     setSearchResults([]);
     setSelectedPlant(null);
@@ -123,6 +141,27 @@ function App() {
       healthStatus: 'Healthy',
       photo: null
     });
+    setManualPlantData({
+      commonName: '',
+      scientificName: '',
+      zone: '',
+      sunlight: '',
+      watering: '',
+      height: '',
+      picture: null,
+      lastWatered: '',
+      pestCheck: 'None',
+      wilting: 'None',
+      healthStatus: 'Healthy',
+      statusPhoto: null
+    });
+  };
+
+  const handleSwitchToManual = () => {
+    setIsManualEntry(true);
+    setSelectedPlant(null);
+    setSearchResults([]);
+    setSearchQuery('');
   };
 
   const handleInputChange = (field, value) => {
@@ -131,6 +170,10 @@ function App() {
 
   const handleNewPlantInputChange = (field, value) => {
     setNewPlantData({ ...newPlantData, [field]: value });
+  };
+
+  const handleManualPlantInputChange = (field, value) => {
+    setManualPlantData({ ...manualPlantData, [field]: value });
   };
 
   const handlePhotoUpload = (e) => {
@@ -150,6 +193,28 @@ function App() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setNewPlantData({ ...newPlantData, photo: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleManualPlantPictureUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setManualPlantData({ ...manualPlantData, picture: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleManualStatusPhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setManualPlantData({ ...manualPlantData, statusPhoto: reader.result });
       };
       reader.readAsDataURL(file);
     }
@@ -208,6 +273,45 @@ function App() {
       wilting: newPlantData.wilting,
       healthStatus: newPlantData.healthStatus,
       photoUrl: newPlantData.photo || 'Latest Pic'
+    };
+
+    setPlantList([...plantList, newPlant]);
+    setPlantStatusList([...plantStatusList, newPlantStatus]);
+    handleCloseAddPlantModal();
+  };
+
+  const handleManualPlantSubmit = () => {
+    // Validate required fields
+    if (!manualPlantData.commonName || !manualPlantData.scientificName) {
+      alert('Please fill in at least Common Name and Scientific Name');
+      return;
+    }
+
+    const newPlant = {
+      commonName: manualPlantData.commonName,
+      scientificName: manualPlantData.scientificName,
+      picture: manualPlantData.picture || 'Pic here',
+      zone: manualPlantData.zone || 'N/A',
+      sunlight: manualPlantData.sunlight || 'N/A',
+      watering: manualPlantData.watering || 'N/A',
+      height: manualPlantData.height || 'N/A'
+    };
+
+    // Format the date from the form
+    let formattedDate = 'N/A';
+    if (manualPlantData.lastWatered) {
+      const date = new Date(manualPlantData.lastWatered);
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      formattedDate = date.toLocaleDateString('en-US', options);
+    }
+
+    // Create corresponding plant status entry
+    const newPlantStatus = {
+      lastWatered: formattedDate,
+      pestCheck: manualPlantData.pestCheck,
+      wilting: manualPlantData.wilting,
+      healthStatus: manualPlantData.healthStatus,
+      photoUrl: manualPlantData.statusPhoto || 'Latest Pic'
     };
 
     setPlantList([...plantList, newPlant]);
@@ -433,9 +537,167 @@ function App() {
       {isAddPlantModalOpen && (
         <div className="modal-overlay" onClick={handleCloseAddPlantModal}>
           <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
-            <h2>Add New Plant</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ marginBottom: 0 }}>Add New Plant</h2>
+              {!isManualEntry && (
+                <button className="btn-submit" onClick={handleSwitchToManual}>
+                  Add Manually
+                </button>
+              )}
+            </div>
 
-            {!selectedPlant ? (
+            {isManualEntry ? (
+              <>
+                {/* Manual Entry Form */}
+                <div className="form-group">
+                  <label>Common Name *</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.commonName}
+                    onChange={(e) => handleManualPlantInputChange('commonName', e.target.value)}
+                    placeholder="e.g., Snake Plant"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Scientific Name *</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.scientificName}
+                    onChange={(e) => handleManualPlantInputChange('scientificName', e.target.value)}
+                    placeholder="e.g., Dracaena trifasciata"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Zone</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.zone}
+                    onChange={(e) => handleManualPlantInputChange('zone', e.target.value)}
+                    placeholder="e.g., 9-12"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Sunlight</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.sunlight}
+                    onChange={(e) => handleManualPlantInputChange('sunlight', e.target.value)}
+                    placeholder="e.g., Low to Bright"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Watering</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.watering}
+                    onChange={(e) => handleManualPlantInputChange('watering', e.target.value)}
+                    placeholder="e.g., Every 2 weeks"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Height</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.height}
+                    onChange={(e) => handleManualPlantInputChange('height', e.target.value)}
+                    placeholder="e.g., 2-3 ft"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Plant Picture</label>
+                  <input
+                    type="file"
+                    accept={"image/*"}
+                    capture="environment"
+                    onChange={handleManualPlantPictureUpload}
+                  />
+                  {manualPlantData.picture && (
+                    <img
+                      src={manualPlantData.picture}
+                      alt="Plant Preview"
+                      style={{ marginTop: '10px', maxWidth: '200px', maxHeight: '200px' }}
+                    />
+                  )}
+                </div>
+
+                <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #ddd' }} />
+                <h3 style={{ fontSize: '1rem', color: '#2e7d32', marginBottom: '15px' }}>Plant Status</h3>
+
+                <div className="form-group">
+                  <label>Last Watered</label>
+                  <input
+                    type="date"
+                    value={manualPlantData.lastWatered}
+                    onChange={(e) => handleManualPlantInputChange('lastWatered', e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Pest Check</label>
+                  <select
+                    value={manualPlantData.pestCheck}
+                    onChange={(e) => handleManualPlantInputChange('pestCheck', e.target.value)}
+                  >
+                    <option value="None">None</option>
+                    <option value="Present">Present</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Wilting</label>
+                  <select
+                    value={manualPlantData.wilting}
+                    onChange={(e) => handleManualPlantInputChange('wilting', e.target.value)}
+                  >
+                    <option value="None">None</option>
+                    <option value="Present">Present</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Health Status</label>
+                  <select
+                    value={manualPlantData.healthStatus}
+                    onChange={(e) => handleManualPlantInputChange('healthStatus', e.target.value)}
+                  >
+                    <option value="Healthy">Healthy</option>
+                    <option value="Unhealthy">Unhealthy</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Status Photo</label>
+                  <input
+                    type="file"
+                    accept={"image/*"}
+                    capture="environment"
+                    onChange={handleManualStatusPhotoUpload}
+                  />
+                  {manualPlantData.statusPhoto && (
+                    <img
+                      src={manualPlantData.statusPhoto}
+                      alt="Status Preview"
+                      style={{ marginTop: '10px', maxWidth: '200px', maxHeight: '200px' }}
+                    />
+                  )}
+                </div>
+
+                <div className="modal-buttons">
+                  <button className="btn-cancel" onClick={handleCloseAddPlantModal}>
+                    Cancel
+                  </button>
+                  <button className="btn-submit" onClick={handleManualPlantSubmit}>
+                    Submit
+                  </button>
+                </div>
+              </>
+            ) : !selectedPlant ? (
               <>
                 <div className="form-group">
                   <label>Search Plant by Scientific Name</label>
@@ -562,7 +824,7 @@ function App() {
               </>
             )}
 
-            {!selectedPlant && searchResults.length === 0 && (
+            {!isManualEntry && !selectedPlant && searchResults.length === 0 && (
               <div className="modal-buttons">
                 <button className="btn-cancel" onClick={handleCloseAddPlantModal}>
                   Cancel
