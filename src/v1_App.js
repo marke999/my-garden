@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import './index.css';
 
 function App() {
-  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddPlantModalOpen, setIsAddPlantModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedPlant, setSelectedPlant] = useState(null);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [currentUpdateIndex, setCurrentUpdateIndex] = useState(0);
 
   const [formData, setFormData] = useState({
     lastWatered: '2026-02-09',
@@ -27,6 +26,14 @@ function App() {
     photo: null
   });
 
+  const [plantStatus, setPlantStatus] = useState({
+    lastWatered: 'February 9, 2026',
+    pestCheck: 'None',
+    wilting: 'None',
+    healthStatus: 'Healthy',
+    photoURL: 'Latest Pic'
+  });
+
   const [plantList, setPlantList] = useState([
     {
       commonName: 'Snake Plant',
@@ -36,16 +43,6 @@ function App() {
       sunlight: 'Low to Bright',
       watering: 'Every 2 weeks',
       height: '2-3 ft'
-    }
-  ]);
-
-  const [plantStatusList, setPlantStatusList] = useState([
-    {
-      lastWatered: 'February 9, 2026',
-      pestCheck: 'None',
-      wilting: 'None',
-      healthStatus: 'Healthy',
-      photoUrl: 'Latest Pic'
     }
   ]);
 
@@ -86,22 +83,12 @@ function App() {
     setIsLoadingDetails(false);
   };
 
-  const handleOpenUpdateModal = (index) => {
-    setCurrentUpdateIndex(index);
-    setFormData({
-      lastWatered: plantStatusList[index].lastWatered === 'N/A' 
-        ? '' 
-        : new Date(plantStatusList[index].lastWatered).toISOString().split('T')[0],
-      pestCheck: plantStatusList[index].pestCheck,
-      wilting: plantStatusList[index].wilting,
-      healthStatus: plantStatusList[index].healthStatus,
-      photo: plantStatusList[index].photoUrl === 'Latest Pic' ? null : plantStatusList[index].photoUrl
-    });
-    setIsUpdateModalOpen(true);
+  const handleOpenUpdateModal = () => {
+    setIsModalOpen(true);
   };
 
   const handleCloseUpdateModal = () => {
-    setIsUpdateModalOpen(false);
+    setIsModalOpen(false);
   };
 
   const handleOpenAddPlantModal = () => {
@@ -156,21 +143,20 @@ function App() {
   };
 
   const handleSubmit = () => {
+    // Convert date to readable format
     const date = new Date(formData.lastWatered);
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     const formattedDate = date.toLocaleDateString('en-US', options);
 
-    const updatedStatusList = [...plantStatusList];
-    updatedStatusList[currentUpdateIndex] = {
+    setPlantStatus({
       lastWatered: formattedDate,
       pestCheck: formData.pestCheck,
       wilting: formData.wilting,
       healthStatus: formData.healthStatus,
-      photoUrl: formData.photo || 'Latest Pic'
-    };
+      photoURL: formData.photo || 'Latest Pic'
+    });
 
-    setPlantStatusList(updatedStatusList);
-    setIsUpdateModalOpen(false);
+    setIsModalOpen(false);
   };
 
   const handleAddPlantSubmit = () => {
@@ -193,25 +179,7 @@ function App() {
         : 'N/A'
     };
 
-    // Format the date from the form
-    let formattedDate = 'N/A';
-    if (newPlantData.lastWatered) {
-      const date = new Date(newPlantData.lastWatered);
-      const options = { year: 'numeric', month: 'long', day: 'numeric' };
-      formattedDate = date.toLocaleDateString('en-US', options);
-    }
-
-    // Create corresponding plant status entry
-    const newPlantStatus = {
-      lastWatered: formattedDate,
-      pestCheck: newPlantData.pestCheck,
-      wilting: newPlantData.wilting,
-      healthStatus: newPlantData.healthStatus,
-      photoUrl: newPlantData.photo || 'Latest Pic'
-    };
-
     setPlantList([...plantList, newPlant]);
-    setPlantStatusList([...plantStatusList, newPlantStatus]);
     handleCloseAddPlantModal();
   };
 
@@ -277,30 +245,24 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {plantStatusList.map((status, index) => (
-                <tr key={index}>
-                  <td>
-                    <button className="update-btn" onClick={() => handleOpenUpdateModal(index)}>
-                      Update
-                    </button>
-                  </td>
-                  <td>{status.lastWatered}</td>
-                  <td>{status.pestCheck}</td>
-                  <td>{status.wilting}</td>
-                  <td>{status.healthStatus}</td>
-                  <td>
-                    {status.photoUrl === 'Latest Pic' ? (
-                      'Latest Pic'
-                    ) : (
-                      <img
-                        src={status.photoUrl}
-                        alt="Plant"
-                        style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                      />
-                    )}
-                  </td>
-                </tr>
-              ))}
+              <tr>
+                <td><button className="update-btn" onClick={handleOpenUpdateModal}>Update</button></td>
+                <td>{plantStatus.lastWatered}</td>
+                <td>{plantStatus.pestCheck}</td>
+                <td>{plantStatus.wilting}</td>
+                <td>{plantStatus.healthStatus}</td>
+                <td>
+                  {plantStatus.photoURL === 'Latest Pic' ? (
+                    'Latest Pic'
+                  ) : (
+                    <img
+                      src={plantStatus.photoURL}
+                      alt="Plant"
+                      style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                    />
+                  )}
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -353,7 +315,7 @@ function App() {
       </div>
 
       {/* Update Plant Status Modal */}
-      {isUpdateModalOpen && (
+      {isModalOpen && (
         <div className="modal-overlay" onClick={handleCloseUpdateModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>Update Plant Status</h2>
@@ -404,7 +366,7 @@ function App() {
               <label>Latest Photo</label>
               <input
                 type="file"
-                accept={"image/*"}
+                accept="image/&#42;"
                 capture="environment"
                 onChange={handlePhotoUpload}
               />
@@ -459,7 +421,7 @@ function App() {
 
                 {searchResults.length > 0 && (
                   <div className="search-results">
-                    <h3>Select a Plant:</h3>
+                    <h3> Select a Plant:</h3>
                     <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                       {searchResults.map((plant) => (
                         <div
@@ -536,7 +498,7 @@ function App() {
                        <label>Latest Photo</label>
                        <input
                          type="file"
-                         accept={"image/*"}
+                         accept={"image/&#42;"}
                          capture="environment"
                          onChange={handleNewPlantPhotoUpload}
                        />
@@ -545,8 +507,8 @@ function App() {
                            src={newPlantData.photo}
                            alt="Preview"
                            style={{ marginTop: '10px', maxWidth: '200px', maxHeight: '200px' }}
-                         />
-                       )}
+                       />
+                     )}
                    </div>
 
                    <div className="modal-buttons">
@@ -577,3 +539,41 @@ function App() {
 }
 
 export default App;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
