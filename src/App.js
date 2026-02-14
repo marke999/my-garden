@@ -9,6 +9,7 @@ function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [isRemoveMode, setIsRemoveMode] = useState(false);
   const [plantsToRemove, setPlantsToRemove] = useState([]);
+  const [lightboxPhoto, setLightboxPhoto] = useState(null);
 
   const [formData, setFormData] = useState({
     lastWatered: '',
@@ -630,7 +631,8 @@ function App() {
                       <img
                         src={status.photoUrl}
                         alt="Plant"
-                        style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
+                        style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer' }}
+                        onClick={() => setLightboxPhoto(status.photoUrl)}
                         onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.textContent = 'Error loading'; }}
                       />
                     )}
@@ -927,6 +929,28 @@ function App() {
                 {isUploading ? 'Uploading...' : 'Submit'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Lightbox */}
+      {lightboxPhoto && (
+        <div 
+          className="lightbox-overlay" 
+          onClick={() => setLightboxPhoto(null)}
+        >
+          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <button 
+              className="lightbox-close" 
+              onClick={() => setLightboxPhoto(null)}
+            >
+              ×
+            </button>
+            <img 
+              src={lightboxPhoto} 
+              alt="Plant enlarged" 
+              style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain' }}
+            />
           </div>
         </div>
       )}
