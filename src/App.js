@@ -215,34 +215,38 @@ function App() {
 
     try {
       const folderName = toFolderName(commonName);
-      const dateStr = formatDateForFilename().toLowerCase(); // Use lowercase for filenames
-      let fileName = `${folderName}_${dateStr}.jpg`;
-      let filePath = `${folderName}/${fileName}`;
-      let counter = 2;
-
+      const dateStr = formatDateForFilename().toLowerCase();
+      
       // Remove data URL prefix if present
       const base64Data = photoBase64.includes(',') 
         ? photoBase64.split(',')[1] 
         : photoBase64;
 
-      // Check if file already exists, if so add _2, _3, etc.
-      while (true) {
-        try {
-          await axios.get(`${GITHUB_API}/contents/${filePath}`, {
-            headers: { Authorization: `token ${GITHUB_TOKEN}` },
-          });
-          // File exists, try next number
-          fileName = `${folderName}_${dateStr}_${counter}.jpg`;
-          filePath = `${folderName}/${fileName}`;
-          counter++;
-        } catch (error) {
-          // File doesn't exist, we can use this name
-          break;
-        }
+      // Get all existing photos in the folder
+      let existingPhotos = [];
+      try {
+        const response = await axios.get(`${GITHUB_API}/contents/${folderName}`, {
+          headers: { Authorization: `token ${GITHUB_TOKEN}` },
+        });
+        existingPhotos = response.data.filter(file => 
+          file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png')
+        );
+        console.log(`📁 Found ${existingPhotos.length} existing photos in folder`);
+      } catch (error) {
+        console.log('📁 Folder does not exist yet, will create with first photo');
       }
 
-      // Upload photo
-      const response = await axios.put(
+      // Find next available number for today's date
+      const todayPhotos = existingPhotos.filter(photo => photo.name.includes(dateStr));
+      let photoNumber = todayPhotos.length + 1;
+      const paddedNumber = String(photoNumber).padStart(2, '0');
+      const fileName = `${folderName}_${dateStr}_${paddedNumber}.jpg`;
+      const filePath = `${folderName}/${fileName}`;
+
+      console.log(`📸 Uploading photo: ${fileName}`);
+
+      // Upload new photo
+      const uploadResponse = await axios.put(
         `${GITHUB_API}/contents/${filePath}`,
         {
           message: `Add photo for ${commonName}`,
@@ -255,8 +259,45 @@ function App() {
         }
       );
 
-      // Return the download_url from the response which is more reliable
-      return response.data.content.download_url || `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/raw/main/${filePath}`;
+      const newPhotoUrl = uploadResponse.data.content.download_url || `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/raw/main/${filePath}`;
+
+      // Check if we have more than 20 photos now
+      const allPhotos = [...existingPhotos, { name: fileName, path: filePath }];
+      if (allPhotos.length > 20) {
+        console.log(`🗑️ Folder has ${allPhotos.length} photos, deleting oldest to keep only 20`);
+        
+        // Sort by filename (oldest first) and delete the oldest ones
+        const sortedPhotos = allPhotos
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .slice(0, allPhotos.length - 20); // Get photos to delete
+        
+        for (const photo of sortedPhotos) {
+          try {
+            // Get the SHA for the file to delete
+            const fileInfo = await axios.get(`${GITHUB_API}/contents/${photo.path}`, {
+              headers: { Authorization: `token ${GITHUB_TOKEN}` },
+            });
+            
+            await axios.delete(`${GITHUB_API}/contents/${photo.path}`, {
+              headers: {
+                Authorization: `token ${GITHUB_TOKEN}`,
+                'Content-Type': 'application/json',
+              },
+              data: {
+                message: `Delete old photo ${photo.name}`,
+                sha: fileInfo.data.sha,
+              },
+            });
+            console.log(`🗑️ Deleted old photo: ${photo.name}`);
+          } catch (deleteError) {
+            console.error(`❌ Failed to delete ${photo.name}:`, deleteError.message);
+          }
+        }
+      }
+
+      console.log(`✅ Photo uploaded successfully: ${newPhotoUrl}`);
+      return newPhotoUrl;
+      
     } catch (error) {
       console.error('Error uploading photo to GitHub:', error);
       alert('Error uploading photo to GitHub');
@@ -633,7 +674,12 @@ function App() {
                         alt="Plant"
                         style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer' }}
                         onClick={() => setLightboxPhoto(status.photoUrl)}
-                        onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.textContent = 'Error loading'; }}
+                        onError={(e) => { 
+                          console.error('❌ Failed to load image:', status.photoUrl);
+                          e.target.style.display = 'none'; 
+                          e.target.parentNode.textContent = 'Error loading'; 
+                        }}
+                        onLoad={() => console.log('✅ Image loaded:', status.photoUrl)}
                       />
                     )}
                   </td>
