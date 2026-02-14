@@ -124,13 +124,22 @@ function App() {
   // Save plantlist.csv to GitHub
   const savePlantListToGitHub = async (plants, statuses) => {
     try {
-      // Create CSV content
+      console.log('Saving to GitHub:', plants.length, 'plants');
+      
+      // Create CSV content with escaped values
       const headers = 'Common Name,Scientific Name,Picture,Zone,Sunlight,Watering,Height,Last Watered,Pest Check,Wilting,Health Status,Photo URL';
       const rows = plants.map((plant, index) => {
         const status = statuses[index];
-        return `${plant.commonName},${plant.scientificName},${plant.picture},${plant.zone},${plant.sunlight},${plant.watering},${plant.height},${status.lastWatered},${status.pestCheck},${status.wilting},${status.healthStatus},${status.photoUrl}`;
+        // Escape commas in values by wrapping in quotes if needed
+        const escapeCsv = (val) => {
+          const str = String(val || '');
+          return str.includes(',') ? `"${str}"` : str;
+        };
+        return `${escapeCsv(plant.commonName)},${escapeCsv(plant.scientificName)},${escapeCsv(plant.picture)},${escapeCsv(plant.zone)},${escapeCsv(plant.sunlight)},${escapeCsv(plant.watering)},${escapeCsv(plant.height)},${escapeCsv(status.lastWatered)},${escapeCsv(status.pestCheck)},${escapeCsv(status.wilting)},${escapeCsv(status.healthStatus)},${escapeCsv(status.photoUrl)}`;
       });
       const csvContent = [headers, ...rows].join('\n');
+      
+      console.log('CSV Content:', csvContent);
 
       // Check if file exists to get SHA
       let sha = null;
@@ -140,11 +149,11 @@ function App() {
         });
         sha = existingFile.data.sha;
       } catch (error) {
-        // File doesn't exist yet
+        console.log('Creating new CSV file');
       }
 
       // Upload or update file
-      await axios.put(
+      const response = await axios.put(
         `${GITHUB_API}/contents/plantlist.csv`,
         {
           message: 'Update plant list',
@@ -158,10 +167,10 @@ function App() {
         }
       );
 
-      console.log('Plant list saved to GitHub');
+      console.log('Plant list saved to GitHub successfully', response.status);
     } catch (error) {
-      console.error('Error saving to GitHub:', error);
-      alert('Error saving plant data to GitHub');
+      console.error('Error saving to GitHub:', error.response?.data || error.message);
+      alert('Error saving plant data to GitHub: ' + (error.response?.data?.message || error.message));
     }
   };
 
