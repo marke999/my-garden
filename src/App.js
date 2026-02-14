@@ -355,19 +355,26 @@ function App() {
 
     setIsUploading(true);
 
+    // Create folder for the plant first
+    const folderName = toFolderName(manualPlantData.commonName);
+    await createFolderInGitHub(folderName);
+
+    // Upload plant picture if present (for Plant List column)
+    let plantPictureUrl = 'Pic here';
+    if (manualPlantData.picture) {
+      plantPictureUrl = await uploadPhotoToGitHub(manualPlantData.commonName, manualPlantData.picture);
+      if (!plantPictureUrl) plantPictureUrl = 'Pic here';
+    }
+
     const newPlant = {
       commonName: manualPlantData.commonName,
       scientificName: manualPlantData.scientificName,
-      picture: manualPlantData.picture || 'Pic here',
+      picture: plantPictureUrl,  // Use URL, not base64
       zone: manualPlantData.zone || 'N/A',
       sunlight: manualPlantData.sunlight || 'N/A',
       watering: manualPlantData.watering || 'N/A',
       height: manualPlantData.height || 'N/A'
     };
-
-    // Create folder for the plant
-    const folderName = toFolderName(newPlant.commonName);
-    await createFolderInGitHub(folderName);
 
     // Format the date from the form
     let formattedDate = 'N/A';
@@ -377,7 +384,7 @@ function App() {
       formattedDate = date.toLocaleDateString('en-US', options);
     }
 
-    // Upload status photo if present
+    // Upload status photo if present (for Plant Status column)
     let photoUrl = 'Latest Pic';
     if (manualPlantData.statusPhoto) {
       photoUrl = await uploadPhotoToGitHub(newPlant.commonName, manualPlantData.statusPhoto);
@@ -390,7 +397,7 @@ function App() {
       pestCheck: manualPlantData.pestCheck,
       wilting: manualPlantData.wilting,
       healthStatus: manualPlantData.healthStatus,
-      photoUrl: photoUrl
+      photoUrl: photoUrl  // Use URL, not base64
     };
 
     const updatedPlants = [...plantList, newPlant];
