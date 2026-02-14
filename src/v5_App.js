@@ -7,8 +7,6 @@ function App() {
   const [isAddPlantModalOpen, setIsAddPlantModalOpen] = useState(false);
   const [currentUpdateIndex, setCurrentUpdateIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [isRemoveMode, setIsRemoveMode] = useState(false);
-  const [plantsToRemove, setPlantsToRemove] = useState([]);
 
   const [formData, setFormData] = useState({
     lastWatered: '',
@@ -92,7 +90,7 @@ function App() {
 
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',');
-        if (values.length >= 12) {
+        if (values.length >= 11) {
           plants.push({
             commonName: values[0] || 'Unknown',
             scientificName: values[1] || 'Unknown',
@@ -141,7 +139,7 @@ function App() {
       });
       const csvContent = [headers, ...rows].join('\n');
       
-      console.log('CSV Content preview:', csvContent.substring(0, 200));
+      console.log('CSV Content:', csvContent);
 
       // Check if file exists to get SHA
       let sha = null;
@@ -274,50 +272,6 @@ function App() {
     });
   };
 
-  const handleToggleRemoveMode = () => {
-    if (isRemoveMode && plantsToRemove.length > 0) {
-      // Confirm deletion
-      if (window.confirm(`Are you sure you want to delete ${plantsToRemove.length} plant(s)?`)) {
-        handleDeletePlants();
-      }
-    } else {
-      setIsRemoveMode(!isRemoveMode);
-      setPlantsToRemove([]);
-    }
-  };
-
-  const handleTogglePlantSelection = (index) => {
-    if (plantsToRemove.includes(index)) {
-      setPlantsToRemove(plantsToRemove.filter(i => i !== index));
-    } else {
-      setPlantsToRemove([...plantsToRemove, index]);
-    }
-  };
-
-  const handleDeletePlants = async () => {
-    setIsUploading(true);
-
-    // Remove selected plants (sort in reverse to avoid index shifting)
-    const sortedIndices = [...plantsToRemove].sort((a, b) => b - a);
-    let updatedPlants = [...plantList];
-    let updatedStatuses = [...plantStatusList];
-
-    sortedIndices.forEach(index => {
-      updatedPlants.splice(index, 1);
-      updatedStatuses.splice(index, 1);
-    });
-
-    setPlantList(updatedPlants);
-    setPlantStatusList(updatedStatuses);
-
-    // Save to GitHub
-    await savePlantListToGitHub(updatedPlants, updatedStatuses);
-
-    setIsRemoveMode(false);
-    setPlantsToRemove([]);
-    setIsUploading(false);
-  };
-
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
   };
@@ -367,11 +321,11 @@ function App() {
     const formattedDate = date.toLocaleDateString('en-US', options);
 
     // Upload photo to GitHub if present
-    let photoUrl = plantStatusList[currentUpdateIndex].photoUrl;
+    let photoUrl = 'Latest Pic';
     if (formData.photo) {
       const commonName = plantList[currentUpdateIndex].commonName;
-      const uploadedUrl = await uploadPhotoToGitHub(commonName, formData.photo);
-      if (uploadedUrl) photoUrl = uploadedUrl;
+      photoUrl = await uploadPhotoToGitHub(commonName, formData.photo);
+      if (!photoUrl) photoUrl = 'Latest Pic';
     }
 
     const updatedStatusList = [...plantStatusList];
@@ -408,8 +362,8 @@ function App() {
     // Upload plant picture if present (for Plant List column)
     let plantPictureUrl = 'Pic here';
     if (manualPlantData.picture) {
-      const uploadedUrl = await uploadPhotoToGitHub(manualPlantData.commonName, manualPlantData.picture);
-      if (uploadedUrl) plantPictureUrl = uploadedUrl;
+      plantPictureUrl = await uploadPhotoToGitHub(manualPlantData.commonName, manualPlantData.picture);
+      if (!plantPictureUrl) plantPictureUrl = 'Pic here';
     }
 
     const newPlant = {
@@ -433,8 +387,8 @@ function App() {
     // Upload status photo if present (for Plant Status column)
     let photoUrl = 'Latest Pic';
     if (manualPlantData.statusPhoto) {
-      const uploadedUrl = await uploadPhotoToGitHub(newPlant.commonName, manualPlantData.statusPhoto);
-      if (uploadedUrl) photoUrl = uploadedUrl;
+      photoUrl = await uploadPhotoToGitHub(newPlant.commonName, manualPlantData.statusPhoto);
+      if (!photoUrl) photoUrl = 'Latest Pic';
     }
 
     // Create corresponding plant status entry
@@ -465,23 +419,14 @@ function App() {
       <div className="section plant-list">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h2 style={{ marginBottom: 0 }}>Plant List</h2>
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-            <button className="add-plant-btn-small" onClick={handleOpenAddPlantModal}>
-              Add Plant
-            </button>
-            <button 
-              className={isRemoveMode ? "remove-plant-btn-active" : "remove-plant-btn"} 
-              onClick={handleToggleRemoveMode}
-            >
-              {isRemoveMode ? 'Done' : 'Remove Plant'}
-            </button>
-          </div>
+          <button className="add-plant-btn" onClick={handleOpenAddPlantModal}>
+            Add Plant
+          </button>
         </div>
         <div className="table-container">
           <table>
             <thead>
               <tr>
-                {isRemoveMode && <th style={{ width: '50px' }}>Select</th>}
                 <th>Common Name</th>
                 <th>Scientific Name</th>
                 <th>Zone</th>
@@ -493,16 +438,6 @@ function App() {
             <tbody>
               {plantList.map((plant, index) => (
                 <tr key={index}>
-                  {isRemoveMode && (
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={plantsToRemove.includes(index)}
-                        onChange={() => handleTogglePlantSelection(index)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                    </td>
-                  )}
                   <td>{plant.commonName}</td>
                   <td>{plant.scientificName}</td>
                   <td>{plant.zone}</td>
@@ -544,14 +479,13 @@ function App() {
                   <td>{status.wilting}</td>
                   <td>{status.healthStatus}</td>
                   <td>
-                    {status.photoUrl === 'Latest Pic' || status.photoUrl === 'Pic here' ? (
+                    {status.photoUrl === 'Latest Pic' ? (
                       'Latest Pic'
                     ) : (
                       <img
                         src={status.photoUrl}
                         alt="Plant"
                         style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
-                        onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.textContent = 'Error loading'; }}
                       />
                     )}
                   </td>

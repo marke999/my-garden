@@ -214,59 +214,22 @@ th {
   background-color: #45a049;
 }
 
-/* Add Plant Button - Small size matching h2 */
-.add-plant-btn-small {
+/* Add Plant Button - plain text style */
+.add-plant-btn {
   background: none;
   color: inherit;
   border: none;
   padding: 0;
   margin: 0;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: inherit;
   font-weight: inherit;
   text-decoration: none;
   font-family: inherit;
 }
 
-.add-plant-btn-small:hover {
+.add-plant-btn:hover {
   text-decoration: underline;
-}
-
-/* Remove Plant Button */
-.remove-plant-btn {
-  background: none;
-  color: inherit;
-  border: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: inherit;
-  text-decoration: none;
-  font-family: inherit;
-}
-
-.remove-plant-btn:hover {
-  text-decoration: underline;
-}
-
-/* Remove Plant Button - Active (red when in delete mode) */
-.remove-plant-btn-active {
-  background: none;
-  color: #d32f2f;
-  border: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: bold;
-  text-decoration: none;
-  font-family: inherit;
-}
-
-.remove-plant-btn-active:hover {
-  text-decoration: underline;
-  color: #b71c1c;
 }
 
 /* Larger modal for Add Plant */
