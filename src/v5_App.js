@@ -7,6 +7,9 @@ function App() {
   const [isAddPlantModalOpen, setIsAddPlantModalOpen] = useState(false);
   const [currentUpdateIndex, setCurrentUpdateIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRemoveMode, setIsRemoveMode] = useState(false);
+  const [plantsToRemove, setPlantsToRemove] = useState([]);
+  const [lightboxPhoto, setLightboxPhoto] = useState(null);
 
   const [formData, setFormData] = useState({
     lastWatered: '',
@@ -33,6 +36,15 @@ function App() {
 
   const [plantList, setPlantList] = useState([]);
   const [plantStatusList, setPlantStatusList] = useState([]);
+  const [weatherForecast, setWeatherForecast] = useState([]);
+  const [isLoadingWeather, setIsLoadingWeather] = useState(false);
+
+  // User location (Cebu, Philippines)
+  const USER_LOCATION = {
+    lat: 10.3157,
+    lon: 123.8854,
+    city: 'Cebu'
+  };
 
   // GitHub configuration
   const GITHUB_TOKEN = process.env.REACT_APP_GITHUB_TOKEN;
@@ -48,15 +60,25 @@ function App() {
   // Helper function to format date for filenames
   const formatDateForFilename = () => {
     const now = new Date();
-    const month = now.toLocaleString('en-US', { month: 'short' }).toLowerCase();
-    const day = now.getDate();
+    const month = now.toLocaleString('en-US', { month: 'short' });
+    const day = String(now.getDate()).padStart(2, '0');
     const year = now.getFullYear();
+    return `${month}-${day}-${year}`;
+  };
+
+  // Helper function to format date for display (MMM-DD-YYYY)
+  const formatDateForDisplay = (dateString) => {
+    const date = new Date(dateString);
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
     return `${month}-${day}-${year}`;
   };
 
   // Load plant data from GitHub CSV on component mount
   useEffect(() => {
     loadPlantDataFromGitHub();
+    fetchWeatherForecast();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -77,7 +99,7 @@ function App() {
       // Decode base64 content
       const csvContent = atob(response.data.content);
       
-      // Parse CSV
+      // Parse CSV with better handling of quoted values
       const lines = csvContent.split('\n').filter(line => line.trim());
       
       if (lines.length <= 1) {
@@ -88,25 +110,48 @@ function App() {
       const plants = [];
       const statuses = [];
 
+      // Simple CSV parser that handles quoted values
+      const parseCSVLine = (line) => {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+        return values;
+      };
+
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',');
+        const values = parseCSVLine(lines[i]);
+        console.log('Parsed row:', values);
+        
         if (values.length >= 11) {
           plants.push({
             commonName: values[0] || 'Unknown',
             scientificName: values[1] || 'Unknown',
-            picture: values[2] || 'Pic here',
-            zone: values[3] || 'N/A',
-            sunlight: values[4] || 'N/A',
-            watering: values[5] || 'N/A',
-            height: values[6] || 'N/A'
+            zone: values[2] || 'N/A',
+            sunlight: values[3] || 'N/A',
+            watering: values[4] || 'N/A',
+            height: values[5] || 'N/A'
           });
 
           statuses.push({
-            lastWatered: values[7] || 'N/A',
-            pestCheck: values[8] || 'None',
-            wilting: values[9] || 'None',
-            healthStatus: values[10] || 'Healthy',
-            photoUrl: values[11] || 'Latest Pic'
+            lastWatered: values[6] || 'N/A',
+            pestCheck: values[7] || 'None',
+            wilting: values[8] || 'None',
+            healthStatus: values[9] || 'Healthy',
+            photoUrl: values[10] || 'Latest Pic'
           });
         }
       }
@@ -121,13 +166,72 @@ function App() {
     }
   };
 
+  // Fetch weather forecast from OpenWeatherMap API
+  const fetchWeatherForecast = async () => {
+    setIsLoadingWeather(true);
+    try {
+      // Using OpenWeatherMap free API
+      // Get your free API key at: https://openweathermap.org/api
+      const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY || '80efc5030d7d27a9872e302c111fa9e0'; // OpenWeather API key
+      
+      const response = await axios.get(
+        `https://api.openweathermap.org/data/2.5/forecast?lat=${USER_LOCATION.lat}&lon=${USER_LOCATION.lon}&units=metric&appid=${API_KEY}`
+      );
+
+      // Process forecast data - get one forecast per day for next 7 days
+      const dailyForecasts = [];
+      const processedDates = new Set();
+      
+      response.data.list.forEach(item => {
+        const date = new Date(item.dt * 1000);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        // Get one forecast per day (around noon)
+        if (!processedDates.has(dateStr) && dailyForecasts.length < 7) {
+          const hour = date.getHours();
+          if (hour >= 11 && hour <= 14) { // Get midday forecast
+            processedDates.add(dateStr);
+            dailyForecasts.push({
+              date: date,
+              dateStr: date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+              day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+              temp: Math.round(item.main.temp),
+              precipitation: item.pop ? Math.round(item.pop * 100) : 0,
+              wind: Math.round(item.wind.speed * 3.6) // Convert m/s to km/h
+            });
+          }
+        }
+      });
+
+      setWeatherForecast(dailyForecasts);
+      console.log('✅ Weather forecast loaded:', dailyForecasts.length, 'days');
+    } catch (error) {
+      console.error('Error fetching weather:', error.message);
+      // Set dummy data if API fails
+      const dummyForecast = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() + i);
+        return {
+          date: date,
+          dateStr: date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+          day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          temp: 28,
+          precipitation: 20,
+          wind: 15
+        };
+      });
+      setWeatherForecast(dummyForecast);
+    }
+    setIsLoadingWeather(false);
+  };
+
   // Save plantlist.csv to GitHub
   const savePlantListToGitHub = async (plants, statuses) => {
     try {
       console.log('Saving to GitHub:', plants.length, 'plants');
       
-      // Create CSV content with escaped values
-      const headers = 'Common Name,Scientific Name,Picture,Zone,Sunlight,Watering,Height,Last Watered,Pest Check,Wilting,Health Status,Photo URL';
+      // Create CSV content with escaped values (NO PICTURE COLUMN)
+      const headers = 'Common Name,Scientific Name,Zone,Sunlight,Watering,Height,Last Watered,Pest Check,Wilting,Health Status,Photo URL';
       const rows = plants.map((plant, index) => {
         const status = statuses[index];
         // Escape commas in values by wrapping in quotes if needed
@@ -135,11 +239,11 @@ function App() {
           const str = String(val || '');
           return str.includes(',') ? `"${str}"` : str;
         };
-        return `${escapeCsv(plant.commonName)},${escapeCsv(plant.scientificName)},${escapeCsv(plant.picture)},${escapeCsv(plant.zone)},${escapeCsv(plant.sunlight)},${escapeCsv(plant.watering)},${escapeCsv(plant.height)},${escapeCsv(status.lastWatered)},${escapeCsv(status.pestCheck)},${escapeCsv(status.wilting)},${escapeCsv(status.healthStatus)},${escapeCsv(status.photoUrl)}`;
+        return `${escapeCsv(plant.commonName)},${escapeCsv(plant.scientificName)},${escapeCsv(plant.zone)},${escapeCsv(plant.sunlight)},${escapeCsv(plant.watering)},${escapeCsv(plant.height)},${escapeCsv(status.lastWatered)},${escapeCsv(status.pestCheck)},${escapeCsv(status.wilting)},${escapeCsv(status.healthStatus)},${escapeCsv(status.photoUrl)}`;
       });
       const csvContent = [headers, ...rows].join('\n');
       
-      console.log('CSV Content:', csvContent);
+      console.log('CSV Content preview:', csvContent.substring(0, 200));
 
       // Check if file exists to get SHA
       let sha = null;
@@ -180,17 +284,38 @@ function App() {
 
     try {
       const folderName = toFolderName(commonName);
-      const dateStr = formatDateForFilename();
-      const fileName = `${folderName}_${dateStr}.jpg`;
-      const filePath = `${folderName}/${fileName}`;
-
+      const dateStr = formatDateForFilename().toLowerCase();
+      
       // Remove data URL prefix if present
       const base64Data = photoBase64.includes(',') 
         ? photoBase64.split(',')[1] 
         : photoBase64;
 
-      // Upload photo
-      await axios.put(
+      // Get all existing photos in the folder
+      let existingPhotos = [];
+      try {
+        const response = await axios.get(`${GITHUB_API}/contents/${folderName}`, {
+          headers: { Authorization: `token ${GITHUB_TOKEN}` },
+        });
+        existingPhotos = response.data.filter(file => 
+          file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png')
+        );
+        console.log(`📁 Found ${existingPhotos.length} existing photos in folder`);
+      } catch (error) {
+        console.log('📁 Folder does not exist yet, will create with first photo');
+      }
+
+      // Find next available number for today's date
+      const todayPhotos = existingPhotos.filter(photo => photo.name.includes(dateStr));
+      let photoNumber = todayPhotos.length + 1;
+      const paddedNumber = String(photoNumber).padStart(2, '0');
+      const fileName = `${folderName}_${dateStr}_${paddedNumber}.jpg`;
+      const filePath = `${folderName}/${fileName}`;
+
+      console.log(`📸 Uploading photo: ${fileName}`);
+
+      // Upload new photo
+      const uploadResponse = await axios.put(
         `${GITHUB_API}/contents/${filePath}`,
         {
           message: `Add photo for ${commonName}`,
@@ -203,8 +328,45 @@ function App() {
         }
       );
 
-      // Return the GitHub URL to the photo
-      return `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}`;
+      const newPhotoUrl = uploadResponse.data.content.download_url || `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/raw/main/${filePath}`;
+
+      // Check if we have more than 20 photos now
+      const allPhotos = [...existingPhotos, { name: fileName, path: filePath }];
+      if (allPhotos.length > 20) {
+        console.log(`🗑️ Folder has ${allPhotos.length} photos, deleting oldest to keep only 20`);
+        
+        // Sort by filename (oldest first) and delete the oldest ones
+        const sortedPhotos = allPhotos
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .slice(0, allPhotos.length - 20); // Get photos to delete
+        
+        for (const photo of sortedPhotos) {
+          try {
+            // Get the SHA for the file to delete
+            const fileInfo = await axios.get(`${GITHUB_API}/contents/${photo.path}`, {
+              headers: { Authorization: `token ${GITHUB_TOKEN}` },
+            });
+            
+            await axios.delete(`${GITHUB_API}/contents/${photo.path}`, {
+              headers: {
+                Authorization: `token ${GITHUB_TOKEN}`,
+                'Content-Type': 'application/json',
+              },
+              data: {
+                message: `Delete old photo ${photo.name}`,
+                sha: fileInfo.data.sha,
+              },
+            });
+            console.log(`🗑️ Deleted old photo: ${photo.name}`);
+          } catch (deleteError) {
+            console.error(`❌ Failed to delete ${photo.name}:`, deleteError.message);
+          }
+        }
+      }
+
+      console.log(`✅ Photo uploaded successfully: ${newPhotoUrl}`);
+      return newPhotoUrl;
+      
     } catch (error) {
       console.error('Error uploading photo to GitHub:', error);
       alert('Error uploading photo to GitHub');
@@ -213,25 +375,6 @@ function App() {
   };
 
   // Create folder in GitHub (by uploading a placeholder file)
-  const createFolderInGitHub = async (folderName) => {
-    try {
-      await axios.put(
-        `${GITHUB_API}/contents/${folderName}/.gitkeep`,
-        {
-          message: `Create folder for ${folderName}`,
-          content: btoa(''),
-        },
-        {
-          headers: {
-            Authorization: `token ${GITHUB_TOKEN}`,
-          },
-        }
-      );
-    } catch (error) {
-      console.log('Folder creation note:', error.message);
-    }
-  };
-
   const handleOpenUpdateModal = (index) => {
     setCurrentUpdateIndex(index);
     setFormData({
@@ -272,6 +415,113 @@ function App() {
     });
   };
 
+  const handleToggleRemoveMode = () => {
+    if (isRemoveMode && plantsToRemove.length > 0) {
+      // Confirm deletion
+      if (window.confirm(`Are you sure you want to delete ${plantsToRemove.length} plant(s)?`)) {
+        handleDeletePlants();
+      }
+    } else {
+      setIsRemoveMode(!isRemoveMode);
+      setPlantsToRemove([]);
+    }
+  };
+
+  const handleTogglePlantSelection = (index) => {
+    if (plantsToRemove.includes(index)) {
+      setPlantsToRemove(plantsToRemove.filter(i => i !== index));
+    } else {
+      setPlantsToRemove([...plantsToRemove, index]);
+    }
+  };
+
+  // Delete folder and all photos from GitHub
+  const deleteFolderFromGitHub = async (folderName) => {
+    try {
+      console.log(`🗑️ Attempting to delete folder: ${folderName}`);
+      
+      // Get all files in the folder
+      const response = await axios.get(`${GITHUB_API}/contents/${folderName}`, {
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+        },
+      });
+
+      const files = response.data;
+      console.log(`📁 Found ${files.length} files:`, files.map(f => f.name));
+
+      // Delete each file one by one (not in parallel to avoid conflicts)
+      for (const file of files) {
+        try {
+          console.log(`🔥 Deleting: ${file.path}`);
+          await axios.delete(`${GITHUB_API}/contents/${file.path}`, {
+            headers: {
+              Authorization: `token ${GITHUB_TOKEN}`,
+              'Content-Type': 'application/json',
+            },
+            data: {
+              message: `Delete ${file.name}`,
+              sha: file.sha,
+            },
+          });
+          console.log(`✅ Deleted: ${file.name}`);
+        } catch (deleteError) {
+          console.error(`❌ Failed to delete ${file.name}:`, deleteError.response?.data || deleteError.message);
+        }
+      }
+
+      console.log(`✅ Folder deletion complete: ${folderName}`);
+      
+    } catch (error) {
+      console.error('❌ Error accessing folder:', error.response?.data || error.message);
+      if (error.response?.status === 404) {
+        console.log('Folder already deleted or does not exist');
+      }
+    }
+  };
+
+  const handleDeletePlants = async () => {
+    if (plantsToRemove.length === 0) return;
+
+    setIsUploading(true);
+
+    // Get plants to delete BEFORE removing them from the list
+    const plantsToDelete = plantsToRemove.map(index => ({
+      commonName: plantList[index].commonName,
+      folderName: toFolderName(plantList[index].commonName)
+    }));
+
+    console.log('🗑️ Deleting plants:', plantsToDelete);
+
+    // Remove selected plants (sort in reverse to avoid index shifting)
+    const sortedIndices = [...plantsToRemove].sort((a, b) => b - a);
+    let updatedPlants = [...plantList];
+    let updatedStatuses = [...plantStatusList];
+
+    sortedIndices.forEach(index => {
+      updatedPlants.splice(index, 1);
+      updatedStatuses.splice(index, 1);
+    });
+
+    setPlantList(updatedPlants);
+    setPlantStatusList(updatedStatuses);
+
+    // Save to GitHub CSV
+    await savePlantListToGitHub(updatedPlants, updatedStatuses);
+
+    // Delete folders from GitHub (one by one to avoid race conditions)
+    for (const plant of plantsToDelete) {
+      console.log(`🗑️ Deleting folder for: ${plant.commonName}`);
+      await deleteFolderFromGitHub(plant.folderName);
+    }
+
+    setIsRemoveMode(false);
+    setPlantsToRemove([]);
+    setIsUploading(false);
+    
+    console.log('✅ All deletions complete!');
+  };
+
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
   };
@@ -291,17 +541,6 @@ function App() {
     }
   };
 
-  const handleManualPlantPictureUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setManualPlantData({ ...manualPlantData, picture: reader.result });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleManualStatusPhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -316,17 +555,24 @@ function App() {
   const handleSubmit = async () => {
     setIsUploading(true);
 
-    const date = new Date(formData.lastWatered);
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    const formattedDate = date.toLocaleDateString('en-US', options);
+    // Format date as MMM-DD-YYYY
+    const formattedDate = formatDateForDisplay(formData.lastWatered);
 
     // Upload photo to GitHub if present
-    let photoUrl = 'Latest Pic';
+    let photoUrl = plantStatusList[currentUpdateIndex].photoUrl;
     if (formData.photo) {
       const commonName = plantList[currentUpdateIndex].commonName;
-      photoUrl = await uploadPhotoToGitHub(commonName, formData.photo);
-      if (!photoUrl) photoUrl = 'Latest Pic';
+      console.log('📸 Uploading new photo for:', commonName);
+      const uploadedUrl = await uploadPhotoToGitHub(commonName, formData.photo);
+      console.log('📸 Photo uploaded, URL:', uploadedUrl);
+      if (uploadedUrl) {
+        photoUrl = uploadedUrl;
+      } else {
+        console.error('❌ Photo upload failed, keeping old URL');
+      }
     }
+
+    console.log('💾 Saving plant status with photo URL:', photoUrl);
 
     const updatedStatusList = [...plantStatusList];
     updatedStatusList[currentUpdateIndex] = {
@@ -339,8 +585,10 @@ function App() {
 
     setPlantStatusList(updatedStatusList);
     
-    // Save to GitHub
+    // Save to GitHub CSV
     await savePlantListToGitHub(plantList, updatedStatusList);
+    
+    console.log('✅ Plant status updated successfully');
     
     setIsUploading(false);
     setIsUpdateModalOpen(false);
@@ -355,40 +603,29 @@ function App() {
 
     setIsUploading(true);
 
-    // Create folder for the plant first
-    const folderName = toFolderName(manualPlantData.commonName);
-    await createFolderInGitHub(folderName);
-
-    // Upload plant picture if present (for Plant List column)
-    let plantPictureUrl = 'Pic here';
-    if (manualPlantData.picture) {
-      plantPictureUrl = await uploadPhotoToGitHub(manualPlantData.commonName, manualPlantData.picture);
-      if (!plantPictureUrl) plantPictureUrl = 'Pic here';
-    }
+    // No need to create folder - it will be created when we upload the photo
 
     const newPlant = {
       commonName: manualPlantData.commonName,
       scientificName: manualPlantData.scientificName,
-      picture: plantPictureUrl,  // Use URL, not base64
       zone: manualPlantData.zone || 'N/A',
       sunlight: manualPlantData.sunlight || 'N/A',
       watering: manualPlantData.watering || 'N/A',
       height: manualPlantData.height || 'N/A'
     };
 
-    // Format the date from the form
+    // Format the date as MMM-DD-YYYY
     let formattedDate = 'N/A';
     if (manualPlantData.lastWatered) {
-      const date = new Date(manualPlantData.lastWatered);
-      const options = { year: 'numeric', month: 'long', day: 'numeric' };
-      formattedDate = date.toLocaleDateString('en-US', options);
+      formattedDate = formatDateForDisplay(manualPlantData.lastWatered);
     }
 
     // Upload status photo if present (for Plant Status column)
+    // This will automatically create the folder
     let photoUrl = 'Latest Pic';
     if (manualPlantData.statusPhoto) {
-      photoUrl = await uploadPhotoToGitHub(newPlant.commonName, manualPlantData.statusPhoto);
-      if (!photoUrl) photoUrl = 'Latest Pic';
+      const uploadedUrl = await uploadPhotoToGitHub(newPlant.commonName, manualPlantData.statusPhoto);
+      if (uploadedUrl) photoUrl = uploadedUrl;
     }
 
     // Create corresponding plant status entry
@@ -397,7 +634,7 @@ function App() {
       pestCheck: manualPlantData.pestCheck,
       wilting: manualPlantData.wilting,
       healthStatus: manualPlantData.healthStatus,
-      photoUrl: photoUrl  // Use URL, not base64
+      photoUrl: photoUrl
     };
 
     const updatedPlants = [...plantList, newPlant];
@@ -419,14 +656,23 @@ function App() {
       <div className="section plant-list">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h2 style={{ marginBottom: 0 }}>Plant List</h2>
-          <button className="add-plant-btn" onClick={handleOpenAddPlantModal}>
-            Add Plant
-          </button>
+          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+            <button className="add-plant-btn-small" onClick={handleOpenAddPlantModal}>
+              Add Plant
+            </button>
+            <button 
+              className={isRemoveMode ? "remove-plant-btn-active" : "remove-plant-btn"} 
+              onClick={handleToggleRemoveMode}
+            >
+              {isRemoveMode ? 'Done' : 'Remove Plant'}
+            </button>
+          </div>
         </div>
         <div className="table-container">
           <table>
             <thead>
               <tr>
+                {isRemoveMode && <th style={{ width: '50px' }}>Select</th>}
                 <th>Common Name</th>
                 <th>Scientific Name</th>
                 <th>Zone</th>
@@ -438,6 +684,16 @@ function App() {
             <tbody>
               {plantList.map((plant, index) => (
                 <tr key={index}>
+                  {isRemoveMode && (
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={plantsToRemove.includes(index)}
+                        onChange={() => handleTogglePlantSelection(index)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </td>
+                  )}
                   <td>{plant.commonName}</td>
                   <td>{plant.scientificName}</td>
                   <td>{plant.zone}</td>
@@ -479,13 +735,20 @@ function App() {
                   <td>{status.wilting}</td>
                   <td>{status.healthStatus}</td>
                   <td>
-                    {status.photoUrl === 'Latest Pic' ? (
+                    {status.photoUrl === 'Latest Pic' || status.photoUrl === 'Pic here' ? (
                       'Latest Pic'
                     ) : (
                       <img
                         src={status.photoUrl}
                         alt="Plant"
-                        style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
+                        style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer' }}
+                        onClick={() => setLightboxPhoto(status.photoUrl)}
+                        onError={(e) => { 
+                          console.error('❌ Failed to load image:', status.photoUrl);
+                          e.target.style.display = 'none'; 
+                          e.target.parentNode.textContent = 'Error loading'; 
+                        }}
+                        onLoad={() => console.log('✅ Image loaded:', status.photoUrl)}
                       />
                     )}
                   </td>
@@ -522,21 +785,33 @@ function App() {
           <table>
             <thead>
               <tr>
+                <th>Date</th>
                 <th>Day</th>
-                <th>Temp</th>
-                <th>Precipitation</th>
-                <th>Wind</th>
+                <th>🌡️</th>
+                <th>💧</th>
+                <th>💨</th>
               </tr>
             </thead>
             <tbody>
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <tr key={day}>
-                  <td>{day}</td>
-                  <td>22 C</td>
-                  <td>10%</td>
-                  <td>12km/h</td>
+              {isLoadingWeather ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center' }}>Loading weather...</td>
                 </tr>
-              ))}
+              ) : weatherForecast.length > 0 ? (
+                weatherForecast.map((forecast, index) => (
+                  <tr key={index}>
+                    <td>{forecast.dateStr}</td>
+                    <td>{forecast.day}</td>
+                    <td>{forecast.temp}°C</td>
+                    <td>{forecast.precipitation}%</td>
+                    <td>{forecast.wind} km/h</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center' }}>Weather data unavailable</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -711,23 +986,6 @@ function App() {
               />
             </div>
 
-            <div className="form-group">
-              <label>Plant Picture</label>
-              <input
-                type="file"
-                accept={"image/*"}
-                capture="environment"
-                onChange={handleManualPlantPictureUpload}
-              />
-              {manualPlantData.picture && (
-                <img
-                  src={manualPlantData.picture}
-                  alt="Plant Preview"
-                  style={{ marginTop: '10px', maxWidth: '200px', maxHeight: '200px' }}
-                />
-              )}
-            </div>
-
             <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #ddd' }} />
             <h3 style={{ fontSize: '1rem', color: '#2e7d32', marginBottom: '15px' }}>Plant Status</h3>
 
@@ -798,6 +1056,28 @@ function App() {
                 {isUploading ? 'Uploading...' : 'Submit'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Lightbox */}
+      {lightboxPhoto && (
+        <div 
+          className="lightbox-overlay" 
+          onClick={() => setLightboxPhoto(null)}
+        >
+          <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <button 
+              className="lightbox-close" 
+              onClick={() => setLightboxPhoto(null)}
+            >
+              ×
+            </button>
+            <img 
+              src={lightboxPhoto} 
+              alt="Plant enlarged" 
+              style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain' }}
+            />
           </div>
         </div>
       )}

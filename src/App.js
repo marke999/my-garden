@@ -75,6 +75,29 @@ function App() {
     return `${month}-${day}-${year}`;
   };
 
+  // Helper function to get weather emoji based on condition
+  const getWeatherEmoji = (main, description) => {
+    const mainLower = main.toLowerCase();
+    const descLower = description.toLowerCase();
+    
+    if (mainLower.includes('clear')) return '☀️';
+    if (mainLower.includes('cloud')) {
+      if (descLower.includes('few') || descLower.includes('scattered')) return '⛅';
+      return '☁️';
+    }
+    if (mainLower.includes('rain')) {
+      if (descLower.includes('thunder')) return '⛈️';
+      if (descLower.includes('shower') || descLower.includes('heavy')) return '🌧️';
+      return '🌦️';
+    }
+    if (mainLower.includes('thunder')) return '⛈️';
+    if (mainLower.includes('drizzle')) return '🌦️';
+    if (mainLower.includes('snow')) return '🌨️';
+    if (mainLower.includes('mist') || mainLower.includes('fog') || mainLower.includes('haze')) return '🌫️';
+    
+    return '☁️'; // Default
+  };
+
   // Load plant data from GitHub CSV on component mount
   useEffect(() => {
     loadPlantDataFromGitHub();
@@ -170,15 +193,17 @@ function App() {
   const fetchWeatherForecast = async () => {
     setIsLoadingWeather(true);
     try {
-      // Using OpenWeatherMap free API
-      // Get your free API key at: https://openweathermap.org/api
-      const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY || '80efc5030d7d27a9872e302c111fa9e0'; // OpenWeather API key
+      const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY;
+      
+      if (!API_KEY) {
+        console.log('⚠️ No OpenWeather API key found, using dummy data');
+        throw new Error('No API key configured');
+      }
       
       const response = await axios.get(
         `https://api.openweathermap.org/data/2.5/forecast?lat=${USER_LOCATION.lat}&lon=${USER_LOCATION.lon}&units=metric&appid=${API_KEY}`
       );
 
-      // Process forecast data - get one forecast per day for next 7 days
       const dailyForecasts = [];
       const processedDates = new Set();
       
@@ -186,18 +211,21 @@ function App() {
         const date = new Date(item.dt * 1000);
         const dateStr = date.toISOString().split('T')[0];
         
-        // Get one forecast per day (around noon)
         if (!processedDates.has(dateStr) && dailyForecasts.length < 7) {
           const hour = date.getHours();
-          if (hour >= 11 && hour <= 14) { // Get midday forecast
+          if (hour >= 11 && hour <= 14) {
             processedDates.add(dateStr);
+            
+            const isToday = date.toDateString() === new Date().toDateString();
+            
             dailyForecasts.push({
               date: date,
               dateStr: date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-              day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+              day: isToday ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' }),
               temp: Math.round(item.main.temp),
               precipitation: item.pop ? Math.round(item.pop * 100) : 0,
-              wind: Math.round(item.wind.speed * 3.6) // Convert m/s to km/h
+              wind: Math.round(item.wind.speed * 3.6),
+              weather: getWeatherEmoji(item.weather[0].main, item.weather[0].description)
             });
           }
         }
@@ -206,21 +234,26 @@ function App() {
       setWeatherForecast(dailyForecasts);
       console.log('✅ Weather forecast loaded:', dailyForecasts.length, 'days');
     } catch (error) {
-      console.error('Error fetching weather:', error.message);
-      // Set dummy data if API fails
+      console.error('⚠️ Weather API error:', error.response?.status, error.message);
+      
+      // Dummy data - 7 days starting from TODAY
       const dummyForecast = Array.from({ length: 7 }, (_, i) => {
         const date = new Date();
         date.setDate(date.getDate() + i);
+        const isToday = i === 0;
+        
         return {
           date: date,
           dateStr: date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-          day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          day: isToday ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' }),
           temp: 28,
           precipitation: 20,
-          wind: 15
+          wind: 15,
+          weather: i % 3 === 0 ? '☀️' : i % 3 === 1 ? '⛅' : '☁️'
         };
       });
       setWeatherForecast(dummyForecast);
+      console.log('ℹ️ Using dummy weather data');
     }
     setIsLoadingWeather(false);
   };
@@ -374,7 +407,6 @@ function App() {
     }
   };
 
-  // Create folder in GitHub (by uploading a placeholder file)
   const handleOpenUpdateModal = (index) => {
     setCurrentUpdateIndex(index);
     setFormData({
@@ -603,8 +635,6 @@ function App() {
 
     setIsUploading(true);
 
-    // No need to create folder - it will be created when we upload the photo
-
     const newPlant = {
       commonName: manualPlantData.commonName,
       scientificName: manualPlantData.scientificName,
@@ -620,8 +650,7 @@ function App() {
       formattedDate = formatDateForDisplay(manualPlantData.lastWatered);
     }
 
-    // Upload status photo if present (for Plant Status column)
-    // This will automatically create the folder
+    // Upload status photo if present (this will automatically create the folder)
     let photoUrl = 'Latest Pic';
     if (manualPlantData.statusPhoto) {
       const uploadedUrl = await uploadPhotoToGitHub(newPlant.commonName, manualPlantData.statusPhoto);
@@ -748,7 +777,6 @@ function App() {
                           e.target.style.display = 'none'; 
                           e.target.parentNode.textContent = 'Error loading'; 
                         }}
-                        onLoad={() => console.log('✅ Image loaded:', status.photoUrl)}
                       />
                     )}
                   </td>
@@ -785,31 +813,33 @@ function App() {
           <table>
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Day</th>
-                <th>🌡️</th>
-                <th>💧</th>
-                <th>💨</th>
+                <th style={{ textAlign: 'center' }}>Date</th>
+                <th style={{ textAlign: 'center' }}>Day</th>
+                <th style={{ textAlign: 'center' }}>☁️</th>
+                <th style={{ textAlign: 'center' }}>🌡️</th>
+                <th style={{ textAlign: 'center' }}>💧</th>
+                <th style={{ textAlign: 'center' }}>💨</th>
               </tr>
             </thead>
             <tbody>
               {isLoadingWeather ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center' }}>Loading weather...</td>
+                  <td colSpan="6" style={{ textAlign: 'center' }}>Loading weather...</td>
                 </tr>
               ) : weatherForecast.length > 0 ? (
                 weatherForecast.map((forecast, index) => (
                   <tr key={index}>
-                    <td>{forecast.dateStr}</td>
-                    <td>{forecast.day}</td>
-                    <td>{forecast.temp}°C</td>
-                    <td>{forecast.precipitation}%</td>
-                    <td>{forecast.wind} km/h</td>
+                    <td style={{ textAlign: 'center' }}>{forecast.dateStr}</td>
+                    <td style={{ textAlign: 'center' }}>{forecast.day}</td>
+                    <td style={{ textAlign: 'center', fontSize: '1.5rem' }}>{forecast.weather}</td>
+                    <td style={{ textAlign: 'center' }}>{forecast.temp}°C</td>
+                    <td style={{ textAlign: 'center' }}>{forecast.precipitation}%</td>
+                    <td style={{ textAlign: 'center' }}>{forecast.wind} km/h</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center' }}>Weather data unavailable</td>
+                  <td colSpan="6" style={{ textAlign: 'center' }}>Weather data unavailable</td>
                 </tr>
               )}
             </tbody>
