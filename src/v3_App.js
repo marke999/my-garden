@@ -62,11 +62,6 @@ function App() {
 
   // Load plantlist.csv from GitHub
   const loadPlantDataFromGitHub = async () => {
-    if (!GITHUB_TOKEN || !GITHUB_USERNAME || !GITHUB_REPO) {
-      console.log('GitHub credentials not set');
-      return;
-    }
-
     try {
       const response = await axios.get(`${GITHUB_API}/contents/plantlist.csv`, {
         headers: {
@@ -80,11 +75,6 @@ function App() {
       // Parse CSV
       const lines = csvContent.split('\n').filter(line => line.trim());
       
-      if (lines.length <= 1) {
-        console.log('CSV file is empty or only has headers');
-        return;
-      }
-      
       const plants = [];
       const statuses = [];
 
@@ -92,32 +82,29 @@ function App() {
         const values = lines[i].split(',');
         if (values.length >= 11) {
           plants.push({
-            commonName: values[0] || 'Unknown',
-            scientificName: values[1] || 'Unknown',
+            commonName: values[0],
+            scientificName: values[1],
             picture: values[2] || 'Pic here',
-            zone: values[3] || 'N/A',
-            sunlight: values[4] || 'N/A',
-            watering: values[5] || 'N/A',
-            height: values[6] || 'N/A'
+            zone: values[3],
+            sunlight: values[4],
+            watering: values[5],
+            height: values[6]
           });
 
           statuses.push({
-            lastWatered: values[7] || 'N/A',
-            pestCheck: values[8] || 'None',
-            wilting: values[9] || 'None',
-            healthStatus: values[10] || 'Healthy',
+            lastWatered: values[7],
+            pestCheck: values[8],
+            wilting: values[9],
+            healthStatus: values[10],
             photoUrl: values[11] || 'Latest Pic'
           });
         }
       }
 
-      if (plants.length > 0) {
-        setPlantList(plants);
-        setPlantStatusList(statuses);
-        console.log(`Loaded ${plants.length} plants from GitHub`);
-      }
+      setPlantList(plants);
+      setPlantStatusList(statuses);
     } catch (error) {
-      console.log('No existing plantlist.csv found or error loading:', error.message);
+      console.log('No existing plantlist.csv found, starting fresh');
     }
   };
 
