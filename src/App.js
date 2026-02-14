@@ -336,17 +336,6 @@ function App() {
     }
   };
 
-  const handleManualPlantPictureUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setManualPlantData({ ...manualPlantData, picture: reader.result });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleManualStatusPhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
