@@ -92,23 +92,22 @@ function App() {
 
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',');
-        if (values.length >= 12) {
+        if (values.length >= 11) {
           plants.push({
             commonName: values[0] || 'Unknown',
             scientificName: values[1] || 'Unknown',
-            picture: values[2] || 'Pic here',
-            zone: values[3] || 'N/A',
-            sunlight: values[4] || 'N/A',
-            watering: values[5] || 'N/A',
-            height: values[6] || 'N/A'
+            zone: values[2] || 'N/A',
+            sunlight: values[3] || 'N/A',
+            watering: values[4] || 'N/A',
+            height: values[5] || 'N/A'
           });
 
           statuses.push({
-            lastWatered: values[7] || 'N/A',
-            pestCheck: values[8] || 'None',
-            wilting: values[9] || 'None',
-            healthStatus: values[10] || 'Healthy',
-            photoUrl: values[11] || 'Latest Pic'
+            lastWatered: values[6] || 'N/A',
+            pestCheck: values[7] || 'None',
+            wilting: values[8] || 'None',
+            healthStatus: values[9] || 'Healthy',
+            photoUrl: values[10] || 'Latest Pic'
           });
         }
       }
@@ -128,8 +127,8 @@ function App() {
     try {
       console.log('Saving to GitHub:', plants.length, 'plants');
       
-      // Create CSV content with escaped values
-      const headers = 'Common Name,Scientific Name,Picture,Zone,Sunlight,Watering,Height,Last Watered,Pest Check,Wilting,Health Status,Photo URL';
+      // Create CSV content with escaped values (NO PICTURE COLUMN)
+      const headers = 'Common Name,Scientific Name,Zone,Sunlight,Watering,Height,Last Watered,Pest Check,Wilting,Health Status,Photo URL';
       const rows = plants.map((plant, index) => {
         const status = statuses[index];
         // Escape commas in values by wrapping in quotes if needed
@@ -137,7 +136,7 @@ function App() {
           const str = String(val || '');
           return str.includes(',') ? `"${str}"` : str;
         };
-        return `${escapeCsv(plant.commonName)},${escapeCsv(plant.scientificName)},${escapeCsv(plant.picture)},${escapeCsv(plant.zone)},${escapeCsv(plant.sunlight)},${escapeCsv(plant.watering)},${escapeCsv(plant.height)},${escapeCsv(status.lastWatered)},${escapeCsv(status.pestCheck)},${escapeCsv(status.wilting)},${escapeCsv(status.healthStatus)},${escapeCsv(status.photoUrl)}`;
+        return `${escapeCsv(plant.commonName)},${escapeCsv(plant.scientificName)},${escapeCsv(plant.zone)},${escapeCsv(plant.sunlight)},${escapeCsv(plant.watering)},${escapeCsv(plant.height)},${escapeCsv(status.lastWatered)},${escapeCsv(status.pestCheck)},${escapeCsv(status.wilting)},${escapeCsv(status.healthStatus)},${escapeCsv(status.photoUrl)}`;
       });
       const csvContent = [headers, ...rows].join('\n');
       
@@ -405,17 +404,9 @@ function App() {
     const folderName = toFolderName(manualPlantData.commonName);
     await createFolderInGitHub(folderName);
 
-    // Upload plant picture if present (for Plant List column)
-    let plantPictureUrl = 'Pic here';
-    if (manualPlantData.picture) {
-      const uploadedUrl = await uploadPhotoToGitHub(manualPlantData.commonName, manualPlantData.picture);
-      if (uploadedUrl) plantPictureUrl = uploadedUrl;
-    }
-
     const newPlant = {
       commonName: manualPlantData.commonName,
       scientificName: manualPlantData.scientificName,
-      picture: plantPictureUrl,  // Use URL, not base64
       zone: manualPlantData.zone || 'N/A',
       sunlight: manualPlantData.sunlight || 'N/A',
       watering: manualPlantData.watering || 'N/A',
@@ -443,7 +434,7 @@ function App() {
       pestCheck: manualPlantData.pestCheck,
       wilting: manualPlantData.wilting,
       healthStatus: manualPlantData.healthStatus,
-      photoUrl: photoUrl  // Use URL, not base64
+      photoUrl: photoUrl
     };
 
     const updatedPlants = [...plantList, newPlant];
@@ -775,23 +766,6 @@ function App() {
                 onChange={(e) => handleManualPlantInputChange('height', e.target.value)}
                 placeholder="e.g., 2-3 ft"
               />
-            </div>
-
-            <div className="form-group">
-              <label>Plant Picture</label>
-              <input
-                type="file"
-                accept={"image/*"}
-                capture="environment"
-                onChange={handleManualPlantPictureUpload}
-              />
-              {manualPlantData.picture && (
-                <img
-                  src={manualPlantData.picture}
-                  alt="Plant Preview"
-                  style={{ marginTop: '10px', maxWidth: '200px', maxHeight: '200px' }}
-                />
-              )}
             </div>
 
             <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #ddd' }} />
