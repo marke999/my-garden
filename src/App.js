@@ -353,7 +353,7 @@ function App() {
         },
       });
 
-      // Delete each file
+      // Delete each file (including .gitkeep)
       const deletePromises = response.data.map(file => 
         axios.delete(`${GITHUB_API}/contents/${file.path}`, {
           data: {
@@ -367,9 +367,12 @@ function App() {
       );
 
       await Promise.all(deletePromises);
-      console.log(`Deleted folder: ${folderName}`);
+      console.log(`Deleted all files in folder: ${folderName}`);
+      
+      // After all files are deleted, the folder will disappear automatically from GitHub
     } catch (error) {
       console.log('Error deleting folder:', error.message);
+      // If folder is already empty or doesn't exist, that's fine
     }
   };
 
