@@ -172,7 +172,7 @@ function App() {
     try {
       // Using OpenWeatherMap free API
       // Get your free API key at: https://openweathermap.org/api
-      const API_KEY = 'YOUR_OPENWEATHER_API_KEY'; // You'll need to replace this
+      const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY || '0490b9ebc59990612e5c86d558c53ce8'; // OpenWeather API key
       
       const response = await axios.get(
         `https://api.openweathermap.org/data/2.5/forecast?lat=${USER_LOCATION.lat}&lon=${USER_LOCATION.lon}&units=metric&appid=${API_KEY}`
