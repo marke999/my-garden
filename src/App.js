@@ -36,6 +36,15 @@ function App() {
 
   const [plantList, setPlantList] = useState([]);
   const [plantStatusList, setPlantStatusList] = useState([]);
+  const [weatherForecast, setWeatherForecast] = useState([]);
+  const [isLoadingWeather, setIsLoadingWeather] = useState(false);
+
+  // User location (Cebu, Philippines)
+  const USER_LOCATION = {
+    lat: 10.3157,
+    lon: 123.8854,
+    city: 'Cebu'
+  };
 
   // GitHub configuration
   const GITHUB_TOKEN = process.env.REACT_APP_GITHUB_TOKEN;
@@ -69,6 +78,7 @@ function App() {
   // Load plant data from GitHub CSV on component mount
   useEffect(() => {
     loadPlantDataFromGitHub();
+    fetchWeatherForecast();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -154,6 +164,65 @@ function App() {
     } catch (error) {
       console.log('No existing plantlist.csv found or error loading:', error.message);
     }
+  };
+
+  // Fetch weather forecast from OpenWeatherMap API
+  const fetchWeatherForecast = async () => {
+    setIsLoadingWeather(true);
+    try {
+      // Using OpenWeatherMap free API
+      // Get your free API key at: https://openweathermap.org/api
+      const API_KEY = 'YOUR_OPENWEATHER_API_KEY'; // You'll need to replace this
+      
+      const response = await axios.get(
+        `https://api.openweathermap.org/data/2.5/forecast?lat=${USER_LOCATION.lat}&lon=${USER_LOCATION.lon}&units=metric&appid=${API_KEY}`
+      );
+
+      // Process forecast data - get one forecast per day for next 7 days
+      const dailyForecasts = [];
+      const processedDates = new Set();
+      
+      response.data.list.forEach(item => {
+        const date = new Date(item.dt * 1000);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        // Get one forecast per day (around noon)
+        if (!processedDates.has(dateStr) && dailyForecasts.length < 7) {
+          const hour = date.getHours();
+          if (hour >= 11 && hour <= 14) { // Get midday forecast
+            processedDates.add(dateStr);
+            dailyForecasts.push({
+              date: date,
+              dateStr: date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+              day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+              temp: Math.round(item.main.temp),
+              precipitation: item.pop ? Math.round(item.pop * 100) : 0,
+              wind: Math.round(item.wind.speed * 3.6) // Convert m/s to km/h
+            });
+          }
+        }
+      });
+
+      setWeatherForecast(dailyForecasts);
+      console.log('✅ Weather forecast loaded:', dailyForecasts.length, 'days');
+    } catch (error) {
+      console.error('Error fetching weather:', error.message);
+      // Set dummy data if API fails
+      const dummyForecast = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() + i);
+        return {
+          date: date,
+          dateStr: date.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+          day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+          temp: 28,
+          precipitation: 20,
+          wind: 15
+        };
+      });
+      setWeatherForecast(dummyForecast);
+    }
+    setIsLoadingWeather(false);
   };
 
   // Save plantlist.csv to GitHub
@@ -716,21 +785,33 @@ function App() {
           <table>
             <thead>
               <tr>
+                <th>Date</th>
                 <th>Day</th>
-                <th>Temp</th>
-                <th>Precipitation</th>
-                <th>Wind</th>
+                <th>🌡️</th>
+                <th>💧</th>
+                <th>💨</th>
               </tr>
             </thead>
             <tbody>
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <tr key={day}>
-                  <td>{day}</td>
-                  <td>22 C</td>
-                  <td>10%</td>
-                  <td>12km/h</td>
+              {isLoadingWeather ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center' }}>Loading weather...</td>
                 </tr>
-              ))}
+              ) : weatherForecast.length > 0 ? (
+                weatherForecast.map((forecast, index) => (
+                  <tr key={index}>
+                    <td>{forecast.dateStr}</td>
+                    <td>{forecast.day}</td>
+                    <td>{forecast.temp}°C</td>
+                    <td>{forecast.precipitation}%</td>
+                    <td>{forecast.wind} km/h</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center' }}>Weather data unavailable</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
