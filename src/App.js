@@ -346,6 +346,8 @@ function App() {
   // Delete folder and all photos from GitHub
   const deleteFolderFromGitHub = async (folderName) => {
     try {
+      console.log(`🗑️ Attempting to delete folder: ${folderName}`);
+      
       // Get all files in the folder
       const response = await axios.get(`${GITHUB_API}/contents/${folderName}`, {
         headers: {
@@ -353,34 +355,51 @@ function App() {
         },
       });
 
-      // Delete each file (including .gitkeep)
-      const deletePromises = response.data.map(file => 
-        axios.delete(`${GITHUB_API}/contents/${file.path}`, {
-          data: {
-            message: `Delete ${file.name}`,
-            sha: file.sha,
-          },
-          headers: {
-            Authorization: `token ${GITHUB_TOKEN}`,
-          },
-        })
-      );
+      const files = response.data;
+      console.log(`📁 Found ${files.length} files:`, files.map(f => f.name));
 
-      await Promise.all(deletePromises);
-      console.log(`Deleted all files in folder: ${folderName}`);
+      // Delete each file one by one (not in parallel to avoid conflicts)
+      for (const file of files) {
+        try {
+          console.log(`🔥 Deleting: ${file.path}`);
+          await axios.delete(`${GITHUB_API}/contents/${file.path}`, {
+            headers: {
+              Authorization: `token ${GITHUB_TOKEN}`,
+              'Content-Type': 'application/json',
+            },
+            data: {
+              message: `Delete ${file.name}`,
+              sha: file.sha,
+            },
+          });
+          console.log(`✅ Deleted: ${file.name}`);
+        } catch (deleteError) {
+          console.error(`❌ Failed to delete ${file.name}:`, deleteError.response?.data || deleteError.message);
+        }
+      }
+
+      console.log(`✅ Folder deletion complete: ${folderName}`);
       
-      // After all files are deleted, the folder will disappear automatically from GitHub
     } catch (error) {
-      console.log('Error deleting folder:', error.message);
-      // If folder is already empty or doesn't exist, that's fine
+      console.error('❌ Error accessing folder:', error.response?.data || error.message);
+      if (error.response?.status === 404) {
+        console.log('Folder already deleted or does not exist');
+      }
     }
   };
 
   const handleDeletePlants = async () => {
+    if (plantsToRemove.length === 0) return;
+
     setIsUploading(true);
 
-    // Get plants to delete (for folder deletion)
-    const plantsToDelete = plantsToRemove.map(index => plantList[index]);
+    // Get plants to delete BEFORE removing them from the list
+    const plantsToDelete = plantsToRemove.map(index => ({
+      commonName: plantList[index].commonName,
+      folderName: toFolderName(plantList[index].commonName)
+    }));
+
+    console.log('🗑️ Deleting plants:', plantsToDelete);
 
     // Remove selected plants (sort in reverse to avoid index shifting)
     const sortedIndices = [...plantsToRemove].sort((a, b) => b - a);
@@ -395,18 +414,20 @@ function App() {
     setPlantList(updatedPlants);
     setPlantStatusList(updatedStatuses);
 
-    // Save to GitHub
+    // Save to GitHub CSV
     await savePlantListToGitHub(updatedPlants, updatedStatuses);
 
-    // Delete folders from GitHub
+    // Delete folders from GitHub (one by one to avoid race conditions)
     for (const plant of plantsToDelete) {
-      const folderName = toFolderName(plant.commonName);
-      await deleteFolderFromGitHub(folderName);
+      console.log(`🗑️ Deleting folder for: ${plant.commonName}`);
+      await deleteFolderFromGitHub(plant.folderName);
     }
 
     setIsRemoveMode(false);
     setPlantsToRemove([]);
     setIsUploading(false);
+    
+    console.log('✅ All deletions complete!');
   };
 
   const handleInputChange = (field, value) => {
@@ -480,9 +501,7 @@ function App() {
 
     setIsUploading(true);
 
-    // Create folder for the plant first
-    const folderName = toFolderName(manualPlantData.commonName);
-    await createFolderInGitHub(folderName);
+    // No need to create folder - it will be created when we upload the photo
 
     const newPlant = {
       commonName: manualPlantData.commonName,
@@ -500,6 +519,7 @@ function App() {
     }
 
     // Upload status photo if present (for Plant Status column)
+    // This will automatically create the folder
     let photoUrl = 'Latest Pic';
     if (manualPlantData.statusPhoto) {
       const uploadedUrl = await uploadPhotoToGitHub(newPlant.commonName, manualPlantData.statusPhoto);
