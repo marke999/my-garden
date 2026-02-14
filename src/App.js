@@ -50,9 +50,18 @@ function App() {
   // Helper function to format date for filenames
   const formatDateForFilename = () => {
     const now = new Date();
-    const month = now.toLocaleString('en-US', { month: 'short' }).toLowerCase();
-    const day = now.getDate();
+    const month = now.toLocaleString('en-US', { month: 'short' });
+    const day = String(now.getDate()).padStart(2, '0');
     const year = now.getFullYear();
+    return `${month}-${day}-${year}`;
+  };
+
+  // Helper function to format date for display (MMM-DD-YYYY)
+  const formatDateForDisplay = (dateString) => {
+    const date = new Date(dateString);
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
     return `${month}-${day}-${year}`;
   };
 
@@ -205,14 +214,31 @@ function App() {
 
     try {
       const folderName = toFolderName(commonName);
-      const dateStr = formatDateForFilename();
-      const fileName = `${folderName}_${dateStr}.jpg`;
-      const filePath = `${folderName}/${fileName}`;
+      const dateStr = formatDateForFilename().toLowerCase(); // Use lowercase for filenames
+      let fileName = `${folderName}_${dateStr}.jpg`;
+      let filePath = `${folderName}/${fileName}`;
+      let counter = 2;
 
       // Remove data URL prefix if present
       const base64Data = photoBase64.includes(',') 
         ? photoBase64.split(',')[1] 
         : photoBase64;
+
+      // Check if file already exists, if so add _2, _3, etc.
+      while (true) {
+        try {
+          await axios.get(`${GITHUB_API}/contents/${filePath}`, {
+            headers: { Authorization: `token ${GITHUB_TOKEN}` },
+          });
+          // File exists, try next number
+          fileName = `${folderName}_${dateStr}_${counter}.jpg`;
+          filePath = `${folderName}/${fileName}`;
+          counter++;
+        } catch (error) {
+          // File doesn't exist, we can use this name
+          break;
+        }
+      }
 
       // Upload photo
       const response = await axios.put(
@@ -229,7 +255,6 @@ function App() {
       );
 
       // Return the download_url from the response which is more reliable
-      // Or construct the htmlURL format which works better
       return response.data.content.download_url || `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/raw/main/${filePath}`;
     } catch (error) {
       console.error('Error uploading photo to GitHub:', error);
@@ -318,8 +343,41 @@ function App() {
     }
   };
 
+  // Delete folder and all photos from GitHub
+  const deleteFolderFromGitHub = async (folderName) => {
+    try {
+      // Get all files in the folder
+      const response = await axios.get(`${GITHUB_API}/contents/${folderName}`, {
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+        },
+      });
+
+      // Delete each file
+      const deletePromises = response.data.map(file => 
+        axios.delete(`${GITHUB_API}/contents/${file.path}`, {
+          data: {
+            message: `Delete ${file.name}`,
+            sha: file.sha,
+          },
+          headers: {
+            Authorization: `token ${GITHUB_TOKEN}`,
+          },
+        })
+      );
+
+      await Promise.all(deletePromises);
+      console.log(`Deleted folder: ${folderName}`);
+    } catch (error) {
+      console.log('Error deleting folder:', error.message);
+    }
+  };
+
   const handleDeletePlants = async () => {
     setIsUploading(true);
+
+    // Get plants to delete (for folder deletion)
+    const plantsToDelete = plantsToRemove.map(index => plantList[index]);
 
     // Remove selected plants (sort in reverse to avoid index shifting)
     const sortedIndices = [...plantsToRemove].sort((a, b) => b - a);
@@ -336,6 +394,12 @@ function App() {
 
     // Save to GitHub
     await savePlantListToGitHub(updatedPlants, updatedStatuses);
+
+    // Delete folders from GitHub
+    for (const plant of plantsToDelete) {
+      const folderName = toFolderName(plant.commonName);
+      await deleteFolderFromGitHub(folderName);
+    }
 
     setIsRemoveMode(false);
     setPlantsToRemove([]);
@@ -375,9 +439,8 @@ function App() {
   const handleSubmit = async () => {
     setIsUploading(true);
 
-    const date = new Date(formData.lastWatered);
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    const formattedDate = date.toLocaleDateString('en-US', options);
+    // Format date as MMM-DD-YYYY
+    const formattedDate = formatDateForDisplay(formData.lastWatered);
 
     // Upload photo to GitHub if present
     let photoUrl = plantStatusList[currentUpdateIndex].photoUrl;
@@ -427,12 +490,10 @@ function App() {
       height: manualPlantData.height || 'N/A'
     };
 
-    // Format the date from the form
+    // Format the date as MMM-DD-YYYY
     let formattedDate = 'N/A';
     if (manualPlantData.lastWatered) {
-      const date = new Date(manualPlantData.lastWatered);
-      const options = { year: 'numeric', month: 'long', day: 'numeric' };
-      formattedDate = date.toLocaleDateString('en-US', options);
+      formattedDate = formatDateForDisplay(manualPlantData.lastWatered);
     }
 
     // Upload status photo if present (for Plant Status column)
