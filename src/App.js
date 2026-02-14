@@ -264,25 +264,6 @@ function App() {
   };
 
   // Create folder in GitHub (by uploading a placeholder file)
-  const createFolderInGitHub = async (folderName) => {
-    try {
-      await axios.put(
-        `${GITHUB_API}/contents/${folderName}/.gitkeep`,
-        {
-          message: `Create folder for ${folderName}`,
-          content: btoa(''),
-        },
-        {
-          headers: {
-            Authorization: `token ${GITHUB_TOKEN}`,
-          },
-        }
-      );
-    } catch (error) {
-      console.log('Folder creation note:', error.message);
-    }
-  };
-
   const handleOpenUpdateModal = (index) => {
     setCurrentUpdateIndex(index);
     setFormData({
