@@ -487,3 +487,614 @@ function App() {
     setPlantStatusList(updatedStatuses);
 
     // Save to GitHub
+    await savePlantListToGitHub(updatedPlants, updatedStatuses);
+
+    setIsUploading(false);
+    handleCloseAddPlantModal();
+  };
+
+  const handleManualPlantSubmit = async () => {
+    // Validate required fields
+    if (!manualPlantData.commonName || !manualPlantData.scientificName) {
+      alert('Please fill in at least Common Name and Scientific Name');
+      return;
+    }
+
+    setIsUploading(true);
+
+    const newPlant = {
+      commonName: manualPlantData.commonName,
+      scientificName: manualPlantData.scientificName,
+      picture: manualPlantData.picture || 'Pic here',
+      zone: manualPlantData.zone || 'N/A',
+      sunlight: manualPlantData.sunlight || 'N/A',
+      watering: manualPlantData.watering || 'N/A',
+      height: manualPlantData.height || 'N/A'
+    };
+
+    // Create folder for the plant
+    const folderName = toFolderName(newPlant.commonName);
+    await createFolderInGitHub(folderName);
+
+    // Format the date from the form
+    let formattedDate = 'N/A';
+    if (manualPlantData.lastWatered) {
+      const date = new Date(manualPlantData.lastWatered);
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      formattedDate = date.toLocaleDateString('en-US', options);
+    }
+
+    // Upload status photo if present
+    let photoUrl = 'Latest Pic';
+    if (manualPlantData.statusPhoto) {
+      photoUrl = await uploadPhotoToGitHub(newPlant.commonName, manualPlantData.statusPhoto);
+      if (!photoUrl) photoUrl = 'Latest Pic';
+    }
+
+    // Create corresponding plant status entry
+    const newPlantStatus = {
+      lastWatered: formattedDate,
+      pestCheck: manualPlantData.pestCheck,
+      wilting: manualPlantData.wilting,
+      healthStatus: manualPlantData.healthStatus,
+      photoUrl: photoUrl
+    };
+
+    const updatedPlants = [...plantList, newPlant];
+    const updatedStatuses = [...plantStatusList, newPlantStatus];
+
+    setPlantList(updatedPlants);
+    setPlantStatusList(updatedStatuses);
+
+    // Save to GitHub
+    await savePlantListToGitHub(updatedPlants, updatedStatuses);
+
+    setIsUploading(false);
+    handleCloseAddPlantModal();
+  };
+
+  return (
+    <div className="dashboard-container">
+      {/* Upper Left: Plant List (1.5/4 width) */}
+      <div className="section plant-list">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h2 style={{ marginBottom: 0 }}>Plant List</h2>
+          <button className="add-plant-btn" onClick={handleOpenAddPlantModal}>
+            Add Plant
+          </button>
+        </div>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Common Name</th>
+                <th>Scientific Name</th>
+                <th>Picture</th>
+                <th>Zone</th>
+                <th>Sunlight</th>
+                <th>Watering</th>
+                <th>Height</th>
+              </tr>
+            </thead>
+            <tbody>
+              {plantList.map((plant, index) => (
+                <tr key={index}>
+                  <td>{plant.commonName}</td>
+                  <td>{plant.scientificName}</td>
+                  <td>
+                    {plant.picture === 'Pic here' || plant.picture === 'No image' ? (
+                      'Pic here'
+                    ) : (
+                      <img src={plant.picture} alt={plant.commonName} style={{ width: '50px', height: '50px', objectFit: 'cover' }} />
+                    )}
+                  </td>
+                  <td>{plant.zone}</td>
+                  <td>{plant.sunlight}</td>
+                  <td>{plant.watering}</td>
+                  <td>{plant.height}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Upper Right: Plant Status (1/4 width) */}
+      <div className="section plant-status">
+        <h2>Plant Status</h2>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Update</th>
+                <th>Last Watered</th>
+                <th>Pest Check</th>
+                <th>Wilting?</th>
+                <th>Health Status</th>
+                <th>Latest Photo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {plantStatusList.map((status, index) => (
+                <tr key={index}>
+                  <td>
+                    <button className="update-btn" onClick={() => handleOpenUpdateModal(index)}>
+                      Update
+                    </button>
+                  </td>
+                  <td>{status.lastWatered}</td>
+                  <td>{status.pestCheck}</td>
+                  <td>{status.wilting}</td>
+                  <td>{status.healthStatus}</td>
+                  <td>
+                    {status.photoUrl === 'Latest Pic' ? (
+                      'Latest Pic'
+                    ) : (
+                      <img
+                        src={status.photoUrl}
+                        alt="Plant"
+                        style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                      />
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Lower Left: Garden Progress (1/4 height/space) */}
+      <div className="section garden-progress">
+        <h2>Garden Progress</h2>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Venue 1</th>
+                <th>Venue 2</th>
+                <th>Venue 3</th>
+                <th>Venue 4</th>
+                <th>Venue 5</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+
+      {/* Lower Right: Weather Forecast (0.5/4 width) */}
+      <div className="section weather-forecast">
+        <h2>7-Day Forecast</h2>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>Temp</th>
+                <th>Precipitation</th>
+                <th>Wind</th>
+              </tr>
+            </thead>
+            <tbody>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <tr key={day}>
+                  <td>{day}</td>
+                  <td>22 C</td>
+                  <td>10%</td>
+                  <td>12km/h</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Loading Overlay */}
+      {isUploading && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            <h3>Uploading to GitHub...</h3>
+            <p>Please wait</p>
+          </div>
+        </div>
+      )}
+
+      {/* Update Plant Status Modal */}
+      {isUpdateModalOpen && (
+        <div className="modal-overlay" onClick={handleCloseUpdateModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Update Plant Status</h2>
+
+            <div className="form-group">
+              <label>Last Watered</label>
+              <input
+                type="date"
+                value={formData.lastWatered}
+                onChange={(e) => handleInputChange('lastWatered', e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Pest Check</label>
+              <select
+                value={formData.pestCheck}
+                onChange={(e) => handleInputChange('pestCheck', e.target.value)}
+              >
+                <option value="None">None</option>
+                <option value="Present">Present</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Wilting</label>
+              <select
+                value={formData.wilting}
+                onChange={(e) => handleInputChange('wilting', e.target.value)}
+              >
+                <option value="None">None</option>
+                <option value="Present">Present</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Health Status</label>
+              <select
+                value={formData.healthStatus}
+                onChange={(e) => handleInputChange('healthStatus', e.target.value)}
+              >
+                <option value="Healthy">Healthy</option>
+                <option value="Unhealthy">Unhealthy</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Latest Photo</label>
+              <input
+                type="file"
+                accept={"image/*"}
+                capture="environment"
+                onChange={handlePhotoUpload}
+              />
+              {formData.photo && (
+                <img
+                  src={formData.photo}
+                  alt="Preview"
+                  style={{ marginTop: '10px', maxWidth: '200px', maxHeight: '200px' }}
+                />
+              )}
+            </div>
+
+            <div className="modal-buttons">
+              <button className="btn-cancel" onClick={handleCloseUpdateModal}>
+                Cancel
+              </button>
+              <button className="btn-submit" onClick={handleSubmit} disabled={isUploading}>
+                {isUploading ? 'Uploading...' : 'Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Plant Modal */}
+      {isAddPlantModalOpen && (
+        <div className="modal-overlay" onClick={handleCloseAddPlantModal}>
+          <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ marginBottom: 0 }}>Add New Plant</h2>
+              {!isManualEntry && (
+                <button className="btn-submit" onClick={handleSwitchToManual}>
+                  Add Manually
+                </button>
+              )}
+            </div>
+
+            {isManualEntry ? (
+              <>
+                {/* Manual Entry Form */}
+                <div className="form-group">
+                  <label>Common Name *</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.commonName}
+                    onChange={(e) => handleManualPlantInputChange('commonName', e.target.value)}
+                    placeholder="e.g., Snake Plant"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Scientific Name *</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.scientificName}
+                    onChange={(e) => handleManualPlantInputChange('scientificName', e.target.value)}
+                    placeholder="e.g., Dracaena trifasciata"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Zone</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.zone}
+                    onChange={(e) => handleManualPlantInputChange('zone', e.target.value)}
+                    placeholder="e.g., 9-12"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Sunlight</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.sunlight}
+                    onChange={(e) => handleManualPlantInputChange('sunlight', e.target.value)}
+                    placeholder="e.g., Low to Bright"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Watering</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.watering}
+                    onChange={(e) => handleManualPlantInputChange('watering', e.target.value)}
+                    placeholder="e.g., Every 2 weeks"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Height</label>
+                  <input
+                    type="text"
+                    value={manualPlantData.height}
+                    onChange={(e) => handleManualPlantInputChange('height', e.target.value)}
+                    placeholder="e.g., 2-3 ft"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Plant Picture</label>
+                  <input
+                    type="file"
+                    accept={"image/*"}
+                    capture="environment"
+                    onChange={handleManualPlantPictureUpload}
+                  />
+                  {manualPlantData.picture && (
+                    <img
+                      src={manualPlantData.picture}
+                      alt="Plant Preview"
+                      style={{ marginTop: '10px', maxWidth: '200px', maxHeight: '200px' }}
+                    />
+                  )}
+                </div>
+
+                <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #ddd' }} />
+                <h3 style={{ fontSize: '1rem', color: '#2e7d32', marginBottom: '15px' }}>Plant Status</h3>
+
+                <div className="form-group">
+                  <label>Last Watered</label>
+                  <input
+                    type="date"
+                    value={manualPlantData.lastWatered}
+                    onChange={(e) => handleManualPlantInputChange('lastWatered', e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Pest Check</label>
+                  <select
+                    value={manualPlantData.pestCheck}
+                    onChange={(e) => handleManualPlantInputChange('pestCheck', e.target.value)}
+                  >
+                    <option value="None">None</option>
+                    <option value="Present">Present</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Wilting</label>
+                  <select
+                    value={manualPlantData.wilting}
+                    onChange={(e) => handleManualPlantInputChange('wilting', e.target.value)}
+                  >
+                    <option value="None">None</option>
+                    <option value="Present">Present</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Health Status</label>
+                  <select
+                    value={manualPlantData.healthStatus}
+                    onChange={(e) => handleManualPlantInputChange('healthStatus', e.target.value)}
+                  >
+                    <option value="Healthy">Healthy</option>
+                    <option value="Unhealthy">Unhealthy</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Status Photo</label>
+                  <input
+                    type="file"
+                    accept={"image/*"}
+                    capture="environment"
+                    onChange={handleManualStatusPhotoUpload}
+                  />
+                  {manualPlantData.statusPhoto && (
+                    <img
+                      src={manualPlantData.statusPhoto}
+                      alt="Status Preview"
+                      style={{ marginTop: '10px', maxWidth: '200px', maxHeight: '200px' }}
+                    />
+                  )}
+                </div>
+
+                <div className="modal-buttons">
+                  <button className="btn-cancel" onClick={handleCloseAddPlantModal}>
+                    Cancel
+                  </button>
+                  <button className="btn-submit" onClick={handleManualPlantSubmit} disabled={isUploading}>
+                    {isUploading ? 'Uploading...' : 'Submit'}
+                  </button>
+                </div>
+              </>
+            ) : !selectedPlant ? (
+              <>
+                <div className="form-group">
+                  <label>Search Plant by Scientific Name</label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handlePlantSearch()}
+                      placeholder="e.g., Dracaena, Rosa, Ficus..."
+                    />
+                    <button
+                      className="btn-submit"
+                      onClick={handlePlantSearch}
+                      disabled={isLoadingSearch}
+                    >
+                      {isLoadingSearch ? 'Searching...' : 'Search'}
+                    </button>
+                  </div>
+                </div>
+
+                {searchResults.length > 0 && (
+                  <div className="search-results">
+                    <h3>Select a Plant:</h3>
+                    <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      {searchResults.map((plant) => (
+                        <div
+                          key={plant.id}
+                          className="search-result-item"
+                          onClick={() => handleSelectPlant(plant)}
+                        >
+                          <strong>{plant.common_name}</strong>
+                          <br />
+                          <em>{plant.scientific_name?.[0]}</em>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {isLoadingDetails ? (
+                  <p>Loading plant details...</p>
+                ) : (
+                  <>
+                    <div className="plant-info">
+                       <h3>{selectedPlant.common_name}</h3>
+                       <p><em>{selectedPlant.scientific_name?.[0]}</em></p>
+                       <button className="btn-back" onClick={() => setSelectedPlant(null)}>
+                         ← Back to Search
+                       </button>
+                     </div>
+
+                     <div className="form-group">
+                       <label>Last Watered</label>
+                       <input
+                         type="date"
+                         value={newPlantData.lastWatered}
+                         onChange={(e) => handleNewPlantInputChange('lastWatered', e.target.value)}
+                       />
+                     </div>
+
+                     <div className="form-group">
+                       <label>Pest Check</label>
+                       <select
+                         value={newPlantData.pestCheck}
+                         onChange={(e) => handleNewPlantInputChange('pestCheck', e.target.value)}
+                       >
+                         <option value="None">None</option>
+                         <option value="Present">Present</option>
+                       </select>
+                     </div>
+
+                     <div className="form-group">
+                       <label>Wilting</label>
+                       <select
+                         value={newPlantData.wilting}
+                         onChange={(e) => handleNewPlantInputChange('wilting', e.target.value)}
+                       >
+                         <option value="None">None</option>
+                         <option value="Present">Present</option>
+                       </select>
+                     </div>
+
+                     <div className="form-group">
+                       <label>Health Status</label>
+                       <select
+                         value={newPlantData.healthStatus}
+                         onChange={(e) => handleNewPlantInputChange('healthStatus', e.target.value)}
+                       >
+                         <option value="Healthy">Healthy</option>
+                         <option value="Unhealthy">Unhealthy</option>
+                       </select>
+                     </div>
+
+                     <div className="form-group">
+                       <label>Latest Photo</label>
+                       <input
+                         type="file"
+                         accept={"image/*"}
+                         capture="environment"
+                         onChange={handleNewPlantPhotoUpload}
+                       />
+                       {newPlantData.photo && (
+                         <img
+                           src={newPlantData.photo}
+                           alt="Preview"
+                           style={{ marginTop: '10px', maxWidth: '200px', maxHeight: '200px' }}
+                         />
+                       )}
+
+                   <div className="modal-buttons">
+                      <button className="btn-cancel" onClick={handleCloseAddPlantModal}>
+                        Cancel
+                      </button>
+                      <button className="btn-submit" onClick={handleAddPlantSubmit} disabled={isUploading}>
+                        {isUploading ? 'Uploading...' : 'Add Plant'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {!isManualEntry && !selectedPlant && searchResults.length === 0 && (
+              <div className="modal-buttons">
+                <button className="btn-cancel" onClick={handleCloseAddPlantModal}>
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
