@@ -57,6 +57,7 @@ function App() {
   // Load plant data from GitHub CSV on component mount
   useEffect(() => {
     loadPlantDataFromGitHub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load plantlist.csv from GitHub
