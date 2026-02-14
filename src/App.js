@@ -451,9 +451,17 @@ function App() {
     let photoUrl = plantStatusList[currentUpdateIndex].photoUrl;
     if (formData.photo) {
       const commonName = plantList[currentUpdateIndex].commonName;
+      console.log('📸 Uploading new photo for:', commonName);
       const uploadedUrl = await uploadPhotoToGitHub(commonName, formData.photo);
-      if (uploadedUrl) photoUrl = uploadedUrl;
+      console.log('📸 Photo uploaded, URL:', uploadedUrl);
+      if (uploadedUrl) {
+        photoUrl = uploadedUrl;
+      } else {
+        console.error('❌ Photo upload failed, keeping old URL');
+      }
     }
+
+    console.log('💾 Saving plant status with photo URL:', photoUrl);
 
     const updatedStatusList = [...plantStatusList];
     updatedStatusList[currentUpdateIndex] = {
@@ -466,8 +474,10 @@ function App() {
 
     setPlantStatusList(updatedStatusList);
     
-    // Save to GitHub
+    // Save to GitHub CSV
     await savePlantListToGitHub(plantList, updatedStatusList);
+    
+    console.log('✅ Plant status updated successfully');
     
     setIsUploading(false);
     setIsUpdateModalOpen(false);
