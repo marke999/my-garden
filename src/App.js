@@ -79,7 +79,7 @@ function App() {
       // Decode base64 content
       const csvContent = atob(response.data.content);
       
-      // Parse CSV
+      // Parse CSV with better handling of quoted values
       const lines = csvContent.split('\n').filter(line => line.trim());
       
       if (lines.length <= 1) {
@@ -90,8 +90,32 @@ function App() {
       const plants = [];
       const statuses = [];
 
+      // Simple CSV parser that handles quoted values
+      const parseCSVLine = (line) => {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+        return values;
+      };
+
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',');
+        const values = parseCSVLine(lines[i]);
+        console.log('Parsed row:', values);
+        
         if (values.length >= 11) {
           plants.push({
             commonName: values[0] || 'Unknown',
@@ -191,7 +215,7 @@ function App() {
         : photoBase64;
 
       // Upload photo
-      await axios.put(
+      const response = await axios.put(
         `${GITHUB_API}/contents/${filePath}`,
         {
           message: `Add photo for ${commonName}`,
@@ -204,8 +228,9 @@ function App() {
         }
       );
 
-      // Return the GitHub URL to the photo
-      return `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}`;
+      // Return the download_url from the response which is more reliable
+      // Or construct the htmlURL format which works better
+      return response.data.content.download_url || `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/raw/main/${filePath}`;
     } catch (error) {
       console.error('Error uploading photo to GitHub:', error);
       alert('Error uploading photo to GitHub');
