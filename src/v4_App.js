@@ -429,6 +429,7 @@ function App() {
               <tr>
                 <th>Common Name</th>
                 <th>Scientific Name</th>
+                <th>Picture</th>
                 <th>Zone</th>
                 <th>Sunlight</th>
                 <th>Watering</th>
@@ -440,6 +441,13 @@ function App() {
                 <tr key={index}>
                   <td>{plant.commonName}</td>
                   <td>{plant.scientificName}</td>
+                  <td>
+                    {plant.picture === 'Pic here' || plant.picture === 'No image' ? (
+                      'Pic here'
+                    ) : (
+                      <img src={plant.picture} alt={plant.commonName} style={{ width: '50px', height: '50px', objectFit: 'cover' }} />
+                    )}
+                  </td>
                   <td>{plant.zone}</td>
                   <td>{plant.sunlight}</td>
                   <td>{plant.watering}</td>
@@ -485,7 +493,7 @@ function App() {
                       <img
                         src={status.photoUrl}
                         alt="Plant"
-                        style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
+                        style={{ width: '50px', height: '50px', objectFit: 'cover' }}
                       />
                     )}
                   </td>
