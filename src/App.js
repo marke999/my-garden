@@ -752,9 +752,6 @@ function App() {
         }
       );
 
-      // Use simple GitHub raw URL with random parameter to bypass CDN cache
-      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}?v=${Date.now()}`;
-
       // Check if we have more than 20 photos now
       const allPhotos = [...existingPhotos, { name: fileName, path: filePath }];
       if (allPhotos.length > 20) {
@@ -789,8 +786,22 @@ function App() {
         }
       }
 
-      console.log(`✅ Photo uploaded successfully: ${newPhotoUrl}`);
-      return newPhotoUrl;
+      // Fetch the uploaded file via API to get base64 content (bypasses CDN cache)
+      try {
+        const fileResponse = await axios.get(`${GITHUB_API}/contents/${filePath}`, {
+          headers: { Authorization: `token ${GITHUB_TOKEN}` },
+        });
+        
+        // Return as data URL for immediate display
+        const newPhotoUrl = `data:image/jpeg;base64,${fileResponse.data.content.replace(/\n/g, '')}`;
+        console.log('✅ Photo uploaded successfully (using base64 data URL)');
+        return newPhotoUrl;
+      } catch (fetchError) {
+        console.error('Failed to fetch via API, falling back to raw URL');
+        const fallbackUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}?v=${Date.now()}`;
+        console.log(`✅ Photo uploaded successfully: ${fallbackUrl}`);
+        return fallbackUrl;
+      }
       
     } catch (error) {
       console.error('Error uploading photo to GitHub:', error);
