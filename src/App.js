@@ -226,7 +226,7 @@ function App() {
       // Check for existing photos this month
       let existingPhotos = [];
       try {
-        const response = await axios.get(`${GITHUB_API}/contents/${folderName}`, {
+        const response = await axios.get(`${GITHUB_API}/contents/locations/${folderName}`, {
           headers: { Authorization: `token ${GITHUB_TOKEN}` },
         });
         existingPhotos = response.data.filter(file => 
@@ -240,7 +240,7 @@ function App() {
       const versionNumber = existingPhotos.length + 1;
       const paddedVersion = String(versionNumber).padStart(2, '0');
       const fileName = `${folderName}_${monthFormatted}_${paddedVersion}.jpg`;
-      const filePath = `${folderName}/${fileName}`;
+      const filePath = `locations/${folderName}/${fileName}`;
 
       console.log(`📸 Uploading garden photo: ${fileName}`);
 
@@ -257,8 +257,9 @@ function App() {
         }
       );
 
-      // Use permanent raw GitHub URL instead of download_url which expires
-      return `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}`;
+      // Use permanent raw GitHub URL with cache-busting parameter
+      const timestamp = Date.now();
+      return `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}?t=${timestamp}`;
     } catch (error) {
       console.error('Error uploading garden photo:', error);
       throw error;
@@ -625,7 +626,7 @@ function App() {
       // Get all existing photos in the folder
       let existingPhotos = [];
       try {
-        const response = await axios.get(`${GITHUB_API}/contents/${folderName}`, {
+        const response = await axios.get(`${GITHUB_API}/contents/plants/${folderName}`, {
           headers: { Authorization: `token ${GITHUB_TOKEN}` },
         });
         existingPhotos = response.data.filter(file => 
@@ -641,7 +642,7 @@ function App() {
       let photoNumber = todayPhotos.length + 1;
       const paddedNumber = String(photoNumber).padStart(2, '0');
       const fileName = `${folderName}_${dateStr}_${paddedNumber}.jpg`;
-      const filePath = `${folderName}/${fileName}`;
+      const filePath = `plants/${folderName}/${fileName}`;
 
       console.log(`📸 Uploading photo: ${fileName}`);
 
@@ -659,8 +660,9 @@ function App() {
         }
       );
 
-      // Use permanent raw GitHub URL instead of download_url which expires
-      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}`;
+      // Use permanent raw GitHub URL with cache-busting parameter
+      const timestamp = Date.now();
+      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}?t=${timestamp}`;
 
       // Check if we have more than 20 photos now
       const allPhotos = [...existingPhotos, { name: fileName, path: filePath }];
@@ -769,10 +771,10 @@ function App() {
   // Delete folder and all photos from GitHub
   const deleteFolderFromGitHub = async (folderName) => {
     try {
-      console.log(`🗑️ Attempting to delete folder: ${folderName}`);
+      console.log(`🗑️ Attempting to delete folder: plants/${folderName}`);
       
       // Get all files in the folder
-      const response = await axios.get(`${GITHUB_API}/contents/${folderName}`, {
+      const response = await axios.get(`${GITHUB_API}/contents/plants/${folderName}`, {
         headers: {
           Authorization: `token ${GITHUB_TOKEN}`,
         },
@@ -801,7 +803,7 @@ function App() {
         }
       }
 
-      console.log(`✅ Folder deletion complete: ${folderName}`);
+      console.log(`✅ Folder deletion complete: plants/${folderName}`);
       
     } catch (error) {
       console.error('❌ Error accessing folder:', error.response?.data || error.message);
