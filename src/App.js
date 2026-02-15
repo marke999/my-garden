@@ -260,8 +260,8 @@ function App() {
         }
       );
 
-      // Use jsdelivr CDN for reliable image loading (no CORS issues)
-      const newPhotoUrl = `https://cdn.jsdelivr.net/gh/${GITHUB_USERNAME}/${GITHUB_REPO}@main/${filePath}`;
+      // Use simple GitHub raw URL - most reliable
+      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}`;
 
       // Check if we have more than 20 photos now
       const allPhotos = [...existingPhotos, { name: fileName, path: filePath }];
@@ -411,22 +411,21 @@ function App() {
         for (let j = 1; j < values.length && j - 1 < months.length; j++) {
           let photoUrl = values[j];
           
-          // Migrate old photo URLs to new structure with jsdelivr CDN
-          if (photoUrl && photoUrl !== '-') {
-            // Convert raw.githubusercontent.com to cdn.jsdelivr.net
-            if (photoUrl.includes('raw.githubusercontent.com')) {
+          // Migrate old photo URLs to new structure
+          if (photoUrl && photoUrl !== '-' && !photoUrl.startsWith('data:')) {
+            // Normalize to raw.githubusercontent.com format
+            if (photoUrl.includes('cdn.jsdelivr.net')) {
               photoUrl = photoUrl
-                .replace('https://raw.githubusercontent.com/', 'https://cdn.jsdelivr.net/gh/')
-                .replace('/main/', '@main/')
-                .replace('?t=', '?'); // Remove timestamp if present
-              
-              // Add /locations/ folder if not present
-              if (!photoUrl.includes('/locations/')) {
-                photoUrl = photoUrl.replace('@main/', '@main/locations/');
-              }
-              
+                .replace('https://cdn.jsdelivr.net/gh/', 'https://raw.githubusercontent.com/')
+                .replace('@main/', '/main/');
               needsUpdate = true;
-              console.log('🔄 Migrated garden photo URL to jsdelivr CDN');
+            }
+            
+            // Ensure /locations/ folder is in path
+            if (!photoUrl.includes('/locations/') && photoUrl.includes('raw.githubusercontent.com')) {
+              photoUrl = photoUrl.replace('/main/', '/main/locations/');
+              needsUpdate = true;
+              console.log('🔄 Migrated garden photo URL to locations folder');
             }
             
             data[folderName][months[j - 1]] = photoUrl;
@@ -513,23 +512,22 @@ function App() {
             height: values[5] || 'N/A'
           });
 
-          // Migrate old photo URLs to new structure with jsdelivr CDN
+          // Migrate old photo URLs to new structure
           let photoUrl = values[10] || 'Latest Pic';
-          if (photoUrl && photoUrl !== 'Latest Pic' && photoUrl !== 'Pic here') {
-            // Convert raw.githubusercontent.com to cdn.jsdelivr.net
-            if (photoUrl.includes('raw.githubusercontent.com')) {
+          if (photoUrl && photoUrl !== 'Latest Pic' && photoUrl !== 'Pic here' && !photoUrl.startsWith('data:')) {
+            // Normalize to raw.githubusercontent.com format
+            if (photoUrl.includes('cdn.jsdelivr.net')) {
               photoUrl = photoUrl
-                .replace('https://raw.githubusercontent.com/', 'https://cdn.jsdelivr.net/gh/')
-                .replace('/main/', '@main/')
-                .replace('?t=', '?'); // Remove timestamp if present
-              
-              // Add /plants/ folder if not present
-              if (!photoUrl.includes('/plants/')) {
-                photoUrl = photoUrl.replace('@main/', '@main/plants/');
-              }
-              
+                .replace('https://cdn.jsdelivr.net/gh/', 'https://raw.githubusercontent.com/')
+                .replace('@main/', '/main/');
               needsUpdate = true;
-              console.log('🔄 Migrated photo URL to jsdelivr CDN');
+            }
+            
+            // Ensure /plants/ folder is in path
+            if (!photoUrl.includes('/plants/') && photoUrl.includes('raw.githubusercontent.com')) {
+              photoUrl = photoUrl.replace('/main/', '/main/plants/');
+              needsUpdate = true;
+              console.log('🔄 Migrated photo URL to plants folder');
             }
           }
 
@@ -540,6 +538,9 @@ function App() {
             healthStatus: values[9] || 'Healthy',
             photoUrl: photoUrl
           });
+          
+          // Debug log
+          console.log(`📷 Plant "${values[0]}" photo URL:`, photoUrl);
         }
       }
 
@@ -751,8 +752,8 @@ function App() {
         }
       );
 
-      // Use jsdelivr CDN for reliable image loading (no CORS issues)
-      const newPhotoUrl = `https://cdn.jsdelivr.net/gh/${GITHUB_USERNAME}/${GITHUB_REPO}@main/${filePath}`;
+      // Use simple GitHub raw URL - most reliable
+      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}`;
 
       // Check if we have more than 20 photos now
       const allPhotos = [...existingPhotos, { name: fileName, path: filePath }];
@@ -1165,8 +1166,18 @@ function App() {
                         onClick={() => setLightboxPhoto(status.photoUrl)}
                         onError={(e) => { 
                           console.error('❌ Failed to load image:', status.photoUrl);
-                          e.target.style.display = 'none'; 
-                          e.target.parentNode.textContent = 'Error loading'; 
+                          
+                          // Try converting to raw.githubusercontent.com if it's a jsdelivr URL
+                          if (status.photoUrl.includes('cdn.jsdelivr.net')) {
+                            const rawUrl = status.photoUrl
+                              .replace('https://cdn.jsdelivr.net/gh/', 'https://raw.githubusercontent.com/')
+                              .replace('@main/', '/main/');
+                            console.log('🔄 Trying raw GitHub URL:', rawUrl);
+                            e.target.src = rawUrl;
+                          } else {
+                            e.target.style.display = 'none'; 
+                            e.target.parentNode.textContent = 'Error loading';
+                          }
                         }}
                       />
                     )}
