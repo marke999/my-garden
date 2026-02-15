@@ -1218,7 +1218,7 @@ function App() {
       {isUpdateModalOpen && (
         <div className="modal-overlay" onClick={handleCloseUpdateModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Update Plant Status</h2>
+            <h2>Update {plantList[currentUpdateIndex].commonName}</h2>
 
             <div className="form-group">
               <label>Last Watered</label>
@@ -1260,6 +1260,27 @@ function App() {
                 <option value="Healthy">Healthy</option>
                 <option value="Unhealthy">Unhealthy</option>
               </select>
+            </div>
+
+            <div className="form-group">
+              <label>Recent Photo</label>
+              {plantStatusList[currentUpdateIndex].photoUrl && 
+               plantStatusList[currentUpdateIndex].photoUrl !== 'Latest Pic' && 
+               plantStatusList[currentUpdateIndex].photoUrl !== 'Pic here' ? (
+                <img
+                  src={plantStatusList[currentUpdateIndex].photoUrl}
+                  alt={plantList[currentUpdateIndex].commonName}
+                  style={{ 
+                    maxWidth: '200px', 
+                    maxHeight: '200px', 
+                    objectFit: 'cover',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd'
+                  }}
+                />
+              ) : (
+                <p style={{ color: '#999', fontSize: '0.9rem', margin: '10px 0' }}>No photo available</p>
+              )}
             </div>
 
             <div className="form-group">
