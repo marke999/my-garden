@@ -792,9 +792,12 @@ function App() {
           headers: { Authorization: `token ${GITHUB_TOKEN}` },
         });
         
+        // GitHub API returns base64 with newlines - clean it
+        const base64Content = fileResponse.data.content.replace(/\s/g, '');
+        
         // Return as data URL for immediate display
-        const newPhotoUrl = `data:image/jpeg;base64,${fileResponse.data.content.replace(/\n/g, '')}`;
-        console.log('✅ Photo uploaded successfully (using base64 data URL)');
+        const newPhotoUrl = `data:image/jpeg;base64,${base64Content}`;
+        console.log('✅ Photo uploaded successfully (using base64 data URL)', newPhotoUrl.substring(0, 50) + '...');
         return newPhotoUrl;
       } catch (fetchError) {
         console.error('Failed to fetch via API, falling back to raw URL');
