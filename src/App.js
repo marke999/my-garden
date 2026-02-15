@@ -260,9 +260,8 @@ function App() {
         }
       );
 
-      // Use permanent raw GitHub URL with cache-busting parameter
-      const timestamp = Date.now();
-      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}?t=${timestamp}`;
+      // Use jsdelivr CDN for reliable image loading (no CORS issues)
+      const newPhotoUrl = `https://cdn.jsdelivr.net/gh/${GITHUB_USERNAME}/${GITHUB_REPO}@main/${filePath}`;
 
       // Check if we have more than 20 photos now
       const allPhotos = [...existingPhotos, { name: fileName, path: filePath }];
@@ -400,6 +399,7 @@ function App() {
       const months = headers.slice(1); // Remove 'Location' header
       
       const data = {};
+      let needsUpdate = false;
       
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',');
@@ -411,15 +411,24 @@ function App() {
         for (let j = 1; j < values.length && j - 1 < months.length; j++) {
           let photoUrl = values[j];
           
-          // Migrate old photo URLs to new structure
-          if (photoUrl && photoUrl !== '-' && !photoUrl.includes('/locations/')) {
-            // Old format: .../hanging_pots_1/hanging_pots_1_...jpg
-            // New format: .../locations/hanging_pots_1/hanging_pots_1_...jpg
-            photoUrl = photoUrl.replace('/main/', '/main/locations/');
-            console.log('🔄 Migrated garden photo URL to new structure');
-          }
-          
+          // Migrate old photo URLs to new structure with jsdelivr CDN
           if (photoUrl && photoUrl !== '-') {
+            // Convert raw.githubusercontent.com to cdn.jsdelivr.net
+            if (photoUrl.includes('raw.githubusercontent.com')) {
+              photoUrl = photoUrl
+                .replace('https://raw.githubusercontent.com/', 'https://cdn.jsdelivr.net/gh/')
+                .replace('/main/', '@main/')
+                .replace('?t=', '?'); // Remove timestamp if present
+              
+              // Add /locations/ folder if not present
+              if (!photoUrl.includes('/locations/')) {
+                photoUrl = photoUrl.replace('@main/', '@main/locations/');
+              }
+              
+              needsUpdate = true;
+              console.log('🔄 Migrated garden photo URL to jsdelivr CDN');
+            }
+            
             data[folderName][months[j - 1]] = photoUrl;
           }
         }
@@ -427,6 +436,12 @@ function App() {
       
       setGardenProgressData(data);
       console.log('✅ Garden progress loaded:', Object.keys(data).length, 'locations');
+      
+      // Save updated URLs back to CSV
+      if (needsUpdate) {
+        console.log('💾 Saving migrated garden URLs to CSV');
+        await saveGardenProgressToGitHub(data);
+      }
       
     } catch (error) {
       console.log('No garden progress CSV found:', error.message);
@@ -460,6 +475,7 @@ function App() {
       
       const plants = [];
       const statuses = [];
+      let needsUpdate = false;
 
       // Simple CSV parser that handles quoted values
       const parseCSVLine = (line) => {
@@ -497,13 +513,24 @@ function App() {
             height: values[5] || 'N/A'
           });
 
-          // Migrate old photo URLs to new structure
+          // Migrate old photo URLs to new structure with jsdelivr CDN
           let photoUrl = values[10] || 'Latest Pic';
-          if (photoUrl && photoUrl !== 'Latest Pic' && photoUrl !== 'Pic here' && !photoUrl.includes('/plants/')) {
-            // Old format: .../snake_plant/snake_plant_...jpg
-            // New format: .../plants/snake_plant/snake_plant_...jpg
-            photoUrl = photoUrl.replace('/main/', '/main/plants/');
-            console.log('🔄 Migrated photo URL to new structure');
+          if (photoUrl && photoUrl !== 'Latest Pic' && photoUrl !== 'Pic here') {
+            // Convert raw.githubusercontent.com to cdn.jsdelivr.net
+            if (photoUrl.includes('raw.githubusercontent.com')) {
+              photoUrl = photoUrl
+                .replace('https://raw.githubusercontent.com/', 'https://cdn.jsdelivr.net/gh/')
+                .replace('/main/', '@main/')
+                .replace('?t=', '?'); // Remove timestamp if present
+              
+              // Add /plants/ folder if not present
+              if (!photoUrl.includes('/plants/')) {
+                photoUrl = photoUrl.replace('@main/', '@main/plants/');
+              }
+              
+              needsUpdate = true;
+              console.log('🔄 Migrated photo URL to jsdelivr CDN');
+            }
           }
 
           statuses.push({
@@ -520,6 +547,12 @@ function App() {
         setPlantList(plants);
         setPlantStatusList(statuses);
         console.log(`Loaded ${plants.length} plants from GitHub`);
+        
+        // Save updated URLs back to CSV
+        if (needsUpdate) {
+          console.log('💾 Saving migrated URLs to CSV');
+          await savePlantListToGitHub(plants, statuses);
+        }
       }
     } catch (error) {
       console.log('No existing plantlist.csv found or error loading:', error.message);
@@ -718,9 +751,8 @@ function App() {
         }
       );
 
-      // Use permanent raw GitHub URL with cache-busting parameter
-      const timestamp = Date.now();
-      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}?t=${timestamp}`;
+      // Use jsdelivr CDN for reliable image loading (no CORS issues)
+      const newPhotoUrl = `https://cdn.jsdelivr.net/gh/${GITHUB_USERNAME}/${GITHUB_REPO}@main/${filePath}`;
 
       // Check if we have more than 20 photos now
       const allPhotos = [...existingPhotos, { name: fileName, path: filePath }];
