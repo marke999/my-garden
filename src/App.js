@@ -136,6 +136,22 @@ function App() {
     });
   };
 
+  // Navigate to previous month
+  const handleGardenPreviousMonth = () => {
+    setGardenProgressModal(prev => ({
+      ...prev,
+      monthIndex: prev.monthIndex === 0 ? 4 : prev.monthIndex - 1
+    }));
+  };
+
+  // Navigate to next month
+  const handleGardenNextMonth = () => {
+    setGardenProgressModal(prev => ({
+      ...prev,
+      monthIndex: prev.monthIndex === 4 ? 0 : prev.monthIndex + 1
+    }));
+  };
+
   // Handle garden photo upload
   const handleGardenPhotoCapture = async (e) => {
     const file = e.target.files[0];
@@ -1112,7 +1128,7 @@ function App() {
                                 borderRadius: '4px',
                                 cursor: 'pointer'
                               }}
-                              onClick={() => setLightboxPhoto(photoUrl)}
+                              onClick={() => setGardenProgressModal({ location, monthIndex })}
                             />
                           ) : (
                             '-'
@@ -1459,9 +1475,51 @@ function App() {
             </button>
             
             <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-              <h2 style={{ color: 'white', marginBottom: '10px' }}>
+              <h2 style={{ color: 'white', marginBottom: '20px' }}>
                 {gardenProgressModal.location} for {getGardenProgressMonths()[gardenProgressModal.monthIndex]}
               </h2>
+              
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
+                <button
+                  onClick={handleGardenPreviousMonth}
+                  style={{
+                    background: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ◀
+                </button>
+                
+                <span style={{ color: 'white', fontSize: '1.2rem', minWidth: '120px' }}>
+                  {getGardenProgressMonths()[gardenProgressModal.monthIndex]}
+                </span>
+                
+                <button
+                  onClick={handleGardenNextMonth}
+                  style={{
+                    background: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ▶
+                </button>
+              </div>
             </div>
             
             <div style={{ 
@@ -1475,6 +1533,9 @@ function App() {
                 const folderName = toFolderName(gardenProgressModal.location);
                 const currentMonth = getGardenProgressMonths()[gardenProgressModal.monthIndex];
                 const photoUrl = gardenProgressData[folderName]?.[currentMonth];
+                
+                // Check if this is a past month (index 0-3) or current/future month (index 4)
+                const isPastMonth = gardenProgressModal.monthIndex < 4;
                 
                 // Show preview if photo was just taken
                 if (gardenPhotoPreview) {
@@ -1528,7 +1589,7 @@ function App() {
                   );
                 }
                 
-                // Show existing photo or take picture button
+                // Show existing photo with Update button
                 if (photoUrl) {
                   return (
                     <div style={{ textAlign: 'center' }}>
@@ -1543,24 +1604,69 @@ function App() {
                           border: '2px solid white'
                         }}
                       />
-                      <div style={{ marginTop: '20px' }}>
+                      {!isPastMonth && (
+                        <div style={{ marginTop: '20px' }}>
+                          <label 
+                            htmlFor="garden-photo-update"
+                            style={{
+                              display: 'inline-block',
+                              padding: '10px 20px',
+                              backgroundColor: '#2e7d32',
+                              color: 'white',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontSize: '1rem',
+                              border: '2px solid white'
+                            }}
+                          >
+                            📸 Update Photo
+                          </label>
+                          <input
+                            id="garden-photo-update"
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleGardenPhotoCapture}
+                            style={{ display: 'none' }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                } else {
+                  // No photo exists
+                  if (isPastMonth) {
+                    // Past month - show "No Record"
+                    return (
+                      <div style={{ 
+                        textAlign: 'center',
+                        color: 'white',
+                        fontSize: '1.5rem'
+                      }}>
+                        No Record
+                      </div>
+                    );
+                  } else {
+                    // Current month - show "Take a Picture"
+                    return (
+                      <div style={{ textAlign: 'center' }}>
                         <label 
-                          htmlFor="garden-photo-update"
+                          htmlFor="garden-photo-upload"
                           style={{
                             display: 'inline-block',
-                            padding: '10px 20px',
+                            padding: '20px 40px',
                             backgroundColor: '#2e7d32',
                             color: 'white',
                             borderRadius: '8px',
                             cursor: 'pointer',
-                            fontSize: '1rem',
+                            fontSize: '1.2rem',
                             border: '2px solid white'
                           }}
                         >
-                          📸 Update Photo
+                          📸 Take a Picture
                         </label>
                         <input
-                          id="garden-photo-update"
+                          id="garden-photo-upload"
                           type="file"
                           accept="image/*"
                           capture="environment"
@@ -1568,36 +1674,8 @@ function App() {
                           style={{ display: 'none' }}
                         />
                       </div>
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div style={{ textAlign: 'center' }}>
-                      <label 
-                        htmlFor="garden-photo-upload"
-                        style={{
-                          display: 'inline-block',
-                          padding: '20px 40px',
-                          backgroundColor: '#2e7d32',
-                          color: 'white',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '1.2rem',
-                          border: '2px solid white'
-                        }}
-                      >
-                        📸 Take a Picture
-                      </label>
-                      <input
-                        id="garden-photo-upload"
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handleGardenPhotoCapture}
-                        style={{ display: 'none' }}
-                      />
-                    </div>
-                  );
+                    );
+                  }
                 }
               })()}
             </div>
