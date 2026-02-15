@@ -260,8 +260,8 @@ function App() {
         }
       );
 
-      // Use simple GitHub raw URL - most reliable
-      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}`;
+      // Use simple GitHub raw URL with random parameter to bypass CDN cache
+      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}?v=${Date.now()}`;
 
       // Check if we have more than 20 photos now
       const allPhotos = [...existingPhotos, { name: fileName, path: filePath }];
@@ -752,8 +752,8 @@ function App() {
         }
       );
 
-      // Use simple GitHub raw URL - most reliable
-      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}`;
+      // Use simple GitHub raw URL with random parameter to bypass CDN cache
+      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}?v=${Date.now()}`;
 
       // Check if we have more than 20 photos now
       const allPhotos = [...existingPhotos, { name: fileName, path: filePath }];
