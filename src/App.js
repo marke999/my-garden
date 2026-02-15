@@ -128,26 +128,11 @@ function App() {
 
   // Handle garden progress location click
   const handleGardenLocationClick = (location) => {
+    // Open modal for current month (last column, index 4)
     setGardenProgressModal({
       location: location,
-      monthIndex: 0 // Start at current month (Feb-2026)
+      monthIndex: 4 // Always open to current month (Feb-2026)
     });
-  };
-
-  // Navigate to previous month
-  const handlePreviousMonth = () => {
-    setGardenProgressModal(prev => ({
-      ...prev,
-      monthIndex: prev.monthIndex === 0 ? 4 : prev.monthIndex - 1
-    }));
-  };
-
-  // Navigate to next month
-  const handleNextMonth = () => {
-    setGardenProgressModal(prev => ({
-      ...prev,
-      monthIndex: prev.monthIndex === 4 ? 0 : prev.monthIndex + 1
-    }));
   };
 
   // Handle garden photo upload
@@ -1056,19 +1041,10 @@ function App() {
                                 borderRadius: '4px',
                                 cursor: 'pointer'
                               }}
-                              onClick={() => setGardenProgressModal({ location, monthIndex })}
+                              onClick={() => setLightboxPhoto(photoUrl)}
                             />
                           ) : (
-                            <span 
-                              onClick={() => setGardenProgressModal({ location, monthIndex })}
-                              style={{ 
-                                cursor: 'pointer',
-                                color: '#999',
-                                fontSize: '0.8rem'
-                              }}
-                            >
-                              -
-                            </span>
+                            '-'
                           )}
                         </td>
                       );
@@ -1409,48 +1385,6 @@ function App() {
               <h2 style={{ color: 'white', marginBottom: '10px' }}>
                 {gardenProgressModal.location} for {getGardenProgressMonths()[gardenProgressModal.monthIndex]}
               </h2>
-              
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
-                <button
-                  onClick={handlePreviousMonth}
-                  style={{
-                    background: 'white',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
-                    fontSize: '20px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  ◀
-                </button>
-                
-                <span style={{ color: 'white', fontSize: '1.2rem', minWidth: '120px' }}>
-                  {getGardenProgressMonths()[gardenProgressModal.monthIndex]}
-                </span>
-                
-                <button
-                  onClick={handleNextMonth}
-                  style={{
-                    background: 'white',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
-                    fontSize: '20px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  ▶
-                </button>
-              </div>
             </div>
             
             <div style={{ 
@@ -1466,7 +1400,7 @@ function App() {
                 
                 if (photoUrl) {
                   return (
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ textAlign: 'center' }}>
                       <img 
                         src={photoUrl}
                         alt={`${gardenProgressModal.location} - ${currentMonth}`}
@@ -1478,11 +1412,7 @@ function App() {
                           border: '2px solid white'
                         }}
                       />
-                      <div style={{ 
-                        textAlign: 'center', 
-                        marginTop: '20px',
-                        color: 'white'
-                      }}>
+                      <div style={{ marginTop: '20px' }}>
                         <label 
                           htmlFor="garden-photo-update"
                           style={{
