@@ -126,7 +126,8 @@ function App() {
     'Hanging Pots 2',
     'Hanging Pots 3',
     'Trellis',
-    'Hanging Pots 4'
+    'Hanging Pots 4',
+    'Side Stairs'
   ];
 
   // Handle garden progress location click
