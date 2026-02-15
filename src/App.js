@@ -223,21 +223,23 @@ function App() {
         ? photoBase64.split(',')[1] 
         : photoBase64;
 
-      // Check for existing photos this month
+      // Check for existing photos in the entire folder
       let existingPhotos = [];
       try {
         const response = await axios.get(`${GITHUB_API}/contents/locations/${folderName}`, {
           headers: { Authorization: `token ${GITHUB_TOKEN}` },
         });
         existingPhotos = response.data.filter(file => 
-          file.name.includes(monthFormatted) && file.name.endsWith('.jpg')
+          file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png')
         );
+        console.log(`📁 Found ${existingPhotos.length} existing photos in location folder`);
       } catch (error) {
-        console.log('Folder does not exist yet');
+        console.log('📁 Folder does not exist yet, will create with first photo');
       }
 
-      // Find next version number
-      const versionNumber = existingPhotos.length + 1;
+      // Check for existing photos this month to determine version number
+      const monthPhotos = existingPhotos.filter(photo => photo.name.includes(monthFormatted));
+      const versionNumber = monthPhotos.length + 1;
       const paddedVersion = String(versionNumber).padStart(2, '0');
       const fileName = `${folderName}_${monthFormatted}_${paddedVersion}.jpg`;
       const filePath = `locations/${folderName}/${fileName}`;
@@ -259,7 +261,44 @@ function App() {
 
       // Use permanent raw GitHub URL with cache-busting parameter
       const timestamp = Date.now();
-      return `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}?t=${timestamp}`;
+      const newPhotoUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}?t=${timestamp}`;
+
+      // Check if we have more than 20 photos now
+      const allPhotos = [...existingPhotos, { name: fileName, path: filePath }];
+      if (allPhotos.length > 20) {
+        console.log(`🗑️ Location folder has ${allPhotos.length} photos, deleting oldest to keep only 20`);
+        
+        // Sort by filename (oldest first) and delete the oldest ones
+        const sortedPhotos = allPhotos
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .slice(0, allPhotos.length - 20); // Get photos to delete
+        
+        for (const photo of sortedPhotos) {
+          try {
+            // Get the SHA for the file to delete
+            const fileInfo = await axios.get(`${GITHUB_API}/contents/${photo.path}`, {
+              headers: { Authorization: `token ${GITHUB_TOKEN}` },
+            });
+            
+            await axios.delete(`${GITHUB_API}/contents/${photo.path}`, {
+              headers: {
+                Authorization: `token ${GITHUB_TOKEN}`,
+                'Content-Type': 'application/json',
+              },
+              data: {
+                message: `Delete old garden photo ${photo.name}`,
+                sha: fileInfo.data.sha,
+              },
+            });
+            console.log(`🗑️ Deleted old garden photo: ${photo.name}`);
+          } catch (deleteError) {
+            console.error(`❌ Failed to delete ${photo.name}:`, deleteError.message);
+          }
+        }
+      }
+
+      console.log(`✅ Garden photo uploaded successfully: ${newPhotoUrl}`);
+      return newPhotoUrl;
     } catch (error) {
       console.error('Error uploading garden photo:', error);
       throw error;
@@ -369,7 +408,16 @@ function App() {
         data[folderName] = {};
         
         for (let j = 1; j < values.length && j - 1 < months.length; j++) {
-          const photoUrl = values[j];
+          let photoUrl = values[j];
+          
+          // Migrate old photo URLs to new structure
+          if (photoUrl && photoUrl !== '-' && !photoUrl.includes('/locations/')) {
+            // Old format: .../hanging_pots_1/hanging_pots_1_...jpg
+            // New format: .../locations/hanging_pots_1/hanging_pots_1_...jpg
+            photoUrl = photoUrl.replace('/main/', '/main/locations/');
+            console.log('🔄 Migrated garden photo URL to new structure');
+          }
+          
           if (photoUrl && photoUrl !== '-') {
             data[folderName][months[j - 1]] = photoUrl;
           }
@@ -448,12 +496,21 @@ function App() {
             height: values[5] || 'N/A'
           });
 
+          // Migrate old photo URLs to new structure
+          let photoUrl = values[10] || 'Latest Pic';
+          if (photoUrl && photoUrl !== 'Latest Pic' && photoUrl !== 'Pic here' && !photoUrl.includes('/plants/')) {
+            // Old format: .../snake_plant/snake_plant_...jpg
+            // New format: .../plants/snake_plant/snake_plant_...jpg
+            photoUrl = photoUrl.replace('/main/', '/main/plants/');
+            console.log('🔄 Migrated photo URL to new structure');
+          }
+
           statuses.push({
             lastWatered: values[6] || 'N/A',
             pestCheck: values[7] || 'None',
             wilting: values[8] || 'None',
             healthStatus: values[9] || 'Healthy',
-            photoUrl: values[10] || 'Latest Pic'
+            photoUrl: photoUrl
           });
         }
       }
