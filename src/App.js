@@ -309,9 +309,61 @@ function App() {
   // Load plant data from GitHub CSV on component mount
   useEffect(() => {
     loadPlantDataFromGitHub();
+    loadGardenProgressFromGitHub();
     fetchWeatherForecast();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load garden progress from CSV
+  const loadGardenProgressFromGitHub = async () => {
+    if (!GITHUB_TOKEN || !GITHUB_USERNAME || !GITHUB_REPO) {
+      console.log('GitHub credentials not set');
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${GITHUB_API}/contents/gardenprogress.csv`, {
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+        },
+      });
+
+      const csvContent = atob(response.data.content);
+      const lines = csvContent.split('\n').filter(line => line.trim());
+      
+      if (lines.length <= 1) {
+        console.log('Garden progress CSV is empty');
+        return;
+      }
+
+      // Parse CSV: Location,Oct-2025,Nov-2025,Dec-2025,Jan-2026,Feb-2026
+      const headers = lines[0].split(',');
+      const months = headers.slice(1); // Remove 'Location' header
+      
+      const data = {};
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',');
+        const location = values[0];
+        const folderName = toFolderName(location);
+        
+        data[folderName] = {};
+        
+        for (let j = 1; j < values.length && j - 1 < months.length; j++) {
+          const photoUrl = values[j];
+          if (photoUrl && photoUrl !== '-') {
+            data[folderName][months[j - 1]] = photoUrl;
+          }
+        }
+      }
+      
+      setGardenProgressData(data);
+      console.log('✅ Garden progress loaded:', Object.keys(data).length, 'locations');
+      
+    } catch (error) {
+      console.log('No garden progress CSV found:', error.message);
+    }
+  };
 
   // Load plantlist.csv from GitHub
   const loadPlantDataFromGitHub = async () => {
