@@ -231,6 +231,26 @@ function App() {
         }
       });
 
+      // Fill in remaining days if less than 7 (OpenWeather free only gives 5 days)
+      // Use the last available day's forecast for the remaining days
+      while (dailyForecasts.length < 7) {
+        const lastForecast = dailyForecasts[dailyForecasts.length - 1];
+        const lastDate = new Date(lastForecast.date);
+        
+        const nextDate = new Date(lastDate);
+        nextDate.setDate(lastDate.getDate() + 1);
+        
+        dailyForecasts.push({
+          date: nextDate,
+          dateStr: nextDate.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+          day: nextDate.toLocaleDateString('en-US', { weekday: 'short' }),
+          temp: lastForecast.temp,
+          precipitation: lastForecast.precipitation,
+          wind: lastForecast.wind,
+          weather: lastForecast.weather
+        });
+      }
+
       setWeatherForecast(dailyForecasts);
       console.log('✅ Weather forecast loaded:', dailyForecasts.length, 'days');
     } catch (error) {
