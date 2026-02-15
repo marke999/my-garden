@@ -1041,6 +1041,11 @@ function App() {
     
     setIsUploading(false);
     setIsUpdateModalOpen(false);
+    
+    // Show info message about photo loading delay
+    if (formData.photo) {
+      alert('✅ Photo uploaded! Note: It may take 2-5 minutes for the photo to appear due to GitHub CDN caching. Please refresh the page after a few minutes if the photo shows "Loading..."');
+    }
   };
 
   const handleManualPlantSubmit = async () => {
@@ -1189,20 +1194,28 @@ function App() {
                         alt="Plant"
                         style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer' }}
                         onClick={() => setLightboxPhoto(status.photoUrl)}
+                        onLoad={(e) => {
+                          e.target.style.opacity = '1';
+                        }}
                         onError={(e) => { 
                           console.error('❌ Failed to load image:', status.photoUrl);
                           
-                          // Try converting to raw.githubusercontent.com if it's a jsdelivr URL
-                          if (status.photoUrl.includes('cdn.jsdelivr.net')) {
-                            const rawUrl = status.photoUrl
-                              .replace('https://cdn.jsdelivr.net/gh/', 'https://raw.githubusercontent.com/')
-                              .replace('@main/', '/main/');
-                            console.log('🔄 Trying raw GitHub URL:', rawUrl);
-                            e.target.src = rawUrl;
-                          } else {
-                            e.target.style.display = 'none'; 
-                            e.target.parentNode.textContent = 'Error loading';
-                          }
+                          // Show "Loading..." placeholder instead of error
+                          e.target.style.display = 'none';
+                          const placeholder = document.createElement('div');
+                          placeholder.textContent = '⏳ Loading...';
+                          placeholder.style.cssText = 'width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #999; border: 1px dashed #ddd; border-radius: 4px;';
+                          e.target.parentNode.appendChild(placeholder);
+                          
+                          // Retry loading after 30 seconds
+                          setTimeout(() => {
+                            console.log('🔄 Retrying image load:', status.photoUrl);
+                            e.target.src = status.photoUrl + '&retry=' + Date.now();
+                            e.target.style.display = 'block';
+                            if (placeholder.parentNode) {
+                              placeholder.remove();
+                            }
+                          }, 30000);
                         }}
                       />
                     )}
