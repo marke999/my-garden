@@ -788,21 +788,32 @@ function App() {
 
       // Fetch the uploaded file via API to get base64 content (bypasses CDN cache)
       try {
+        console.log('🔍 Fetching photo via GitHub API:', filePath);
         const fileResponse = await axios.get(`${GITHUB_API}/contents/${filePath}`, {
           headers: { Authorization: `token ${GITHUB_TOKEN}` },
         });
         
+        console.log('📦 GitHub API response:', {
+          hasContent: !!fileResponse.data.content,
+          contentLength: fileResponse.data.content?.length || 0,
+          contentPreview: fileResponse.data.content?.substring(0, 50)
+        });
+        
         // GitHub API returns base64 with newlines - clean it
-        const base64Content = fileResponse.data.content.replace(/\s/g, '');
+        const base64Content = (fileResponse.data.content || '').replace(/\s/g, '');
+        
+        if (!base64Content) {
+          throw new Error('GitHub API returned empty content');
+        }
         
         // Return as data URL for immediate display
         const newPhotoUrl = `data:image/jpeg;base64,${base64Content}`;
-        console.log('✅ Photo uploaded successfully (using base64 data URL)', newPhotoUrl.substring(0, 50) + '...');
+        console.log('✅ Photo uploaded successfully (using base64 data URL), length:', base64Content.length);
         return newPhotoUrl;
       } catch (fetchError) {
-        console.error('Failed to fetch via API, falling back to raw URL');
+        console.error('❌ Failed to fetch via API:', fetchError.message);
         const fallbackUrl = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${filePath}?v=${Date.now()}`;
-        console.log(`✅ Photo uploaded successfully: ${fallbackUrl}`);
+        console.log(`⚠️ Using fallback URL: ${fallbackUrl}`);
         return fallbackUrl;
       }
       
