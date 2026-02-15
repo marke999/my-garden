@@ -38,7 +38,8 @@ function App() {
   const [plantStatusList, setPlantStatusList] = useState([]);
   const [weatherForecast, setWeatherForecast] = useState([]);
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
-  const [gardenProgressModal, setGardenProgressModal] = useState(null); // { location: 'Hanging Pots 1', photos: [...] }
+  const [gardenProgressModal, setGardenProgressModal] = useState(null); // { location: 'Hanging Pots 1', monthIndex: 0 }
+  const [gardenProgressData, setGardenProgressData] = useState({}); // { 'hanging_pots_1': { 'Feb-2026': 'url', ... } }
 
   // User location (Cebu, Philippines)
   const USER_LOCATION = {
@@ -126,12 +127,178 @@ function App() {
 
   // Handle garden progress location click
   const handleGardenLocationClick = (location) => {
-    // TODO: Fetch photos for this location from GitHub
-    // For now, show placeholder
     setGardenProgressModal({
       location: location,
-      photos: [] // Will be populated with actual photos later
+      monthIndex: 0 // Start at current month (Feb-2026)
     });
+  };
+
+  // Navigate to previous month
+  const handlePreviousMonth = () => {
+    setGardenProgressModal(prev => ({
+      ...prev,
+      monthIndex: prev.monthIndex === 0 ? 4 : prev.monthIndex - 1
+    }));
+  };
+
+  // Navigate to next month
+  const handleNextMonth = () => {
+    setGardenProgressModal(prev => ({
+      ...prev,
+      monthIndex: prev.monthIndex === 4 ? 0 : prev.monthIndex + 1
+    }));
+  };
+
+  // Handle garden photo upload
+  const handleGardenPhotoCapture = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64Data = reader.result;
+      
+      // Upload to GitHub
+      const folderName = toFolderName(gardenProgressModal.location);
+      const months = getGardenProgressMonths();
+      const currentMonth = months[gardenProgressModal.monthIndex];
+      const monthFormatted = currentMonth.toLowerCase().replace(' ', '-'); // 'feb-2026'
+      
+      try {
+        const photoUrl = await uploadGardenPhotoToGitHub(
+          folderName,
+          monthFormatted,
+          base64Data
+        );
+
+        if (photoUrl) {
+          // Update garden progress data
+          setGardenProgressData(prev => ({
+            ...prev,
+            [folderName]: {
+              ...(prev[folderName] || {}),
+              [currentMonth]: photoUrl
+            }
+          }));
+
+          // Save to gardenprogress.csv
+          await saveGardenProgressToGitHub({
+            ...gardenProgressData,
+            [folderName]: {
+              ...(gardenProgressData[folderName] || {}),
+              [currentMonth]: photoUrl
+            }
+          });
+
+          console.log('✅ Garden photo uploaded:', photoUrl);
+        }
+      } catch (error) {
+        console.error('❌ Error uploading garden photo:', error);
+        alert('Failed to upload photo');
+      }
+
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Upload garden photo to GitHub
+  const uploadGardenPhotoToGitHub = async (folderName, monthFormatted, photoBase64) => {
+    try {
+      const base64Data = photoBase64.includes(',') 
+        ? photoBase64.split(',')[1] 
+        : photoBase64;
+
+      // Check for existing photos this month
+      let existingPhotos = [];
+      try {
+        const response = await axios.get(`${GITHUB_API}/contents/${folderName}`, {
+          headers: { Authorization: `token ${GITHUB_TOKEN}` },
+        });
+        existingPhotos = response.data.filter(file => 
+          file.name.includes(monthFormatted) && file.name.endsWith('.jpg')
+        );
+      } catch (error) {
+        console.log('Folder does not exist yet');
+      }
+
+      // Find next version number
+      const versionNumber = existingPhotos.length + 1;
+      const fileName = `${folderName}_${monthFormatted}_v${versionNumber}.jpg`;
+      const filePath = `${folderName}/${fileName}`;
+
+      console.log(`📸 Uploading garden photo: ${fileName}`);
+
+      const uploadResponse = await axios.put(
+        `${GITHUB_API}/contents/${filePath}`,
+        {
+          message: `Add garden photo for ${folderName}`,
+          content: base64Data,
+        },
+        {
+          headers: {
+            Authorization: `token ${GITHUB_TOKEN}`,
+          },
+        }
+      );
+
+      return uploadResponse.data.content.download_url || 
+             `https://github.com/${GITHUB_USERNAME}/${GITHUB_REPO}/raw/main/${filePath}`;
+    } catch (error) {
+      console.error('Error uploading garden photo:', error);
+      throw error;
+    }
+  };
+
+  // Save garden progress to CSV
+  const saveGardenProgressToGitHub = async (data) => {
+    try {
+      console.log('Saving garden progress to GitHub');
+      
+      // Create CSV content
+      const headers = 'Location,Month,Photo URL';
+      const rows = [];
+      
+      Object.keys(data).forEach(location => {
+        Object.keys(data[location]).forEach(month => {
+          rows.push(`${location},${month},${data[location][month]}`);
+        });
+      });
+      
+      const csvContent = [headers, ...rows].join('\n');
+
+      // Check if file exists
+      let sha = null;
+      try {
+        const existingFile = await axios.get(`${GITHUB_API}/contents/gardenprogress.csv`, {
+          headers: { Authorization: `token ${GITHUB_TOKEN}` },
+        });
+        sha = existingFile.data.sha;
+      } catch (error) {
+        console.log('Creating new gardenprogress.csv');
+      }
+
+      // Upload
+      await axios.put(
+        `${GITHUB_API}/contents/gardenprogress.csv`,
+        {
+          message: 'Update garden progress',
+          content: btoa(csvContent),
+          sha: sha,
+        },
+        {
+          headers: {
+            Authorization: `token ${GITHUB_TOKEN}`,
+          },
+        }
+      );
+
+      console.log('✅ Garden progress saved');
+    } catch (error) {
+      console.error('Error saving garden progress:', error);
+    }
   };
 
   // Load plant data from GitHub CSV on component mount
@@ -1203,53 +1370,111 @@ function App() {
             >
               ×
             </button>
-            <h2 style={{ color: 'white', marginBottom: '20px', textAlign: 'center' }}>
-              {gardenProgressModal.location}
-            </h2>
             
-            {gardenProgressModal.photos.length > 0 ? (
-              <div style={{ 
-                display: 'flex', 
-                overflowX: 'auto', 
-                gap: '20px',
-                padding: '20px',
-                maxWidth: '90vw'
-              }}>
-                {gardenProgressModal.photos.map((photo, index) => (
-                  <div key={index} style={{ 
-                    minWidth: '300px',
-                    textAlign: 'center'
-                  }}>
+            <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+              <h2 style={{ color: 'white', marginBottom: '10px' }}>
+                {gardenProgressModal.location} for {getGardenProgressMonths()[gardenProgressModal.monthIndex]}
+              </h2>
+              
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
+                <button
+                  onClick={handlePreviousMonth}
+                  style={{
+                    background: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ◀
+                </button>
+                
+                <span style={{ color: 'white', fontSize: '1.2rem', minWidth: '120px' }}>
+                  {getGardenProgressMonths()[gardenProgressModal.monthIndex]}
+                </span>
+                
+                <button
+                  onClick={handleNextMonth}
+                  style={{
+                    background: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ▶
+                </button>
+              </div>
+            </div>
+            
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '400px'
+            }}>
+              {(() => {
+                const folderName = toFolderName(gardenProgressModal.location);
+                const currentMonth = getGardenProgressMonths()[gardenProgressModal.monthIndex];
+                const photoUrl = gardenProgressData[folderName]?.[currentMonth];
+                
+                if (photoUrl) {
+                  return (
                     <img 
-                      src={photo.url} 
-                      alt={photo.month}
-                      style={{ 
-                        width: '300px', 
-                        height: '300px', 
-                        objectFit: 'cover',
+                      src={photoUrl}
+                      alt={`${gardenProgressModal.location} - ${currentMonth}`}
+                      style={{
+                        maxWidth: '600px',
+                        maxHeight: '600px',
+                        objectFit: 'contain',
                         borderRadius: '8px',
                         border: '2px solid white'
                       }}
                     />
-                    <p style={{ color: 'white', marginTop: '10px', fontSize: '1.2rem' }}>
-                      {photo.month}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ 
-                textAlign: 'center', 
-                color: 'white', 
-                padding: '40px',
-                fontSize: '1.2rem'
-              }}>
-                <p>No photos yet for this location.</p>
-                <p style={{ fontSize: '1rem', marginTop: '10px', opacity: 0.8 }}>
-                  Photos will appear here once you start tracking this location.
-                </p>
-              </div>
-            )}
+                  );
+                } else {
+                  return (
+                    <div style={{ textAlign: 'center' }}>
+                      <label 
+                        htmlFor="garden-photo-upload"
+                        style={{
+                          display: 'inline-block',
+                          padding: '20px 40px',
+                          backgroundColor: '#2e7d32',
+                          color: 'white',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '1.2rem',
+                          border: '2px solid white'
+                        }}
+                      >
+                        📸 Take a Picture
+                      </label>
+                      <input
+                        id="garden-photo-upload"
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleGardenPhotoCapture}
+                        style={{ display: 'none' }}
+                      />
+                    </div>
+                  );
+                }
+              })()}
+            </div>
           </div>
         </div>
       )}
