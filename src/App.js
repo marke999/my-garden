@@ -38,6 +38,7 @@ function App() {
   const [plantStatusList, setPlantStatusList] = useState([]);
   const [weatherForecast, setWeatherForecast] = useState([]);
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
+  const [gardenProgressModal, setGardenProgressModal] = useState(null); // { location: 'Hanging Pots 1', photos: [...] }
 
   // User location (Cebu, Philippines)
   const USER_LOCATION = {
@@ -96,6 +97,41 @@ function App() {
     if (mainLower.includes('mist') || mainLower.includes('fog') || mainLower.includes('haze')) return '🌫️';
     
     return '☁️'; // Default
+  };
+
+  // Helper function to generate 5 months starting from current month
+  const getGardenProgressMonths = () => {
+    const months = [];
+    const today = new Date();
+    
+    for (let i = 0; i < 5; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      const monthStr = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      months.push(monthStr);
+    }
+    
+    return months;
+  };
+
+  // Garden locations
+  const gardenLocations = [
+    'Hanging Pots 1',
+    'Grotto',
+    'Garden',
+    'Fortune Plant',
+    'Stairs',
+    'Hanging Pots 2',
+    'Hanging Pots 3'
+  ];
+
+  // Handle garden progress location click
+  const handleGardenLocationClick = (location) => {
+    // TODO: Fetch photos for this location from GitHub
+    // For now, show placeholder
+    setGardenProgressModal({
+      location: location,
+      photos: [] // Will be populated with actual photos later
+    });
   };
 
   // Load plant data from GitHub CSV on component mount
@@ -814,14 +850,33 @@ function App() {
           <table>
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Venue 1</th>
-                <th>Venue 2</th>
-                <th>Venue 3</th>
-                <th>Venue 4</th>
-                <th>Venue 5</th>
+                <th>Location</th>
+                {getGardenProgressMonths().map((month, index) => (
+                  <th key={index}>{month}</th>
+                ))}
               </tr>
             </thead>
+            <tbody>
+              {gardenLocations.map((location, index) => (
+                <tr key={index}>
+                  <td>
+                    <span 
+                      onClick={() => handleGardenLocationClick(location)}
+                      style={{ 
+                        cursor: 'pointer', 
+                        textDecoration: 'underline',
+                        color: '#2e7d32'
+                      }}
+                    >
+                      {location}
+                    </span>
+                  </td>
+                  {getGardenProgressMonths().map((month, monthIndex) => (
+                    <td key={monthIndex}></td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
           </table>
         </div>
       </div>
@@ -1128,6 +1183,73 @@ function App() {
               alt="Plant enlarged" 
               style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain' }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Garden Progress Modal */}
+      {gardenProgressModal && (
+        <div 
+          className="lightbox-overlay" 
+          onClick={() => setGardenProgressModal(null)}
+        >
+          <div 
+            className="garden-progress-modal" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              className="lightbox-close" 
+              onClick={() => setGardenProgressModal(null)}
+            >
+              ×
+            </button>
+            <h2 style={{ color: 'white', marginBottom: '20px', textAlign: 'center' }}>
+              {gardenProgressModal.location}
+            </h2>
+            
+            {gardenProgressModal.photos.length > 0 ? (
+              <div style={{ 
+                display: 'flex', 
+                overflowX: 'auto', 
+                gap: '20px',
+                padding: '20px',
+                maxWidth: '90vw'
+              }}>
+                {gardenProgressModal.photos.map((photo, index) => (
+                  <div key={index} style={{ 
+                    minWidth: '300px',
+                    textAlign: 'center'
+                  }}>
+                    <img 
+                      src={photo.url} 
+                      alt={photo.month}
+                      style={{ 
+                        width: '300px', 
+                        height: '300px', 
+                        objectFit: 'cover',
+                        borderRadius: '8px',
+                        border: '2px solid white'
+                      }}
+                    />
+                    <p style={{ color: 'white', marginTop: '10px', fontSize: '1.2rem' }}>
+                      {photo.month}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ 
+                textAlign: 'center', 
+                color: 'white', 
+                padding: '40px',
+                fontSize: '1.2rem'
+              }}>
+                <p>No photos yet for this location.</p>
+                <p style={{ fontSize: '1rem', marginTop: '10px', opacity: 0.8 }}>
+                  Photos will appear here once you start tracking this location.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

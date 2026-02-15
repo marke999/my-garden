@@ -313,6 +313,18 @@ th {
   opacity: 0.7;
 }
 
+/* Garden Progress Modal */
+.garden-progress-modal {
+  position: relative;
+  max-width: 90vw;
+  max-height: 80vh;
+  background-color: rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
+  padding: 40px 20px 20px 20px;
+  cursor: default;
+  overflow-y: auto;
+}
+
 /* Larger modal for Add Plant */
 .modal-large {
   max-width: 600px;
