@@ -244,7 +244,7 @@ function App() {
 
       console.log(`📸 Uploading garden photo: ${fileName}`);
 
-      const uploadResponse = await axios.put(
+      await axios.put(
         `${GITHUB_API}/contents/${filePath}`,
         {
           message: `Add garden photo for ${folderName}`,
@@ -646,7 +646,7 @@ function App() {
       console.log(`📸 Uploading photo: ${fileName}`);
 
       // Upload new photo
-      const uploadResponse = await axios.put(
+      await axios.put(
         `${GITHUB_API}/contents/${filePath}`,
         {
           message: `Add photo for ${commonName}`,
