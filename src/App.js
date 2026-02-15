@@ -40,6 +40,7 @@ function App() {
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
   const [gardenProgressModal, setGardenProgressModal] = useState(null); // { location: 'Hanging Pots 1', monthIndex: 0 }
   const [gardenProgressData, setGardenProgressData] = useState({}); // { 'hanging_pots_1': { 'Feb-2026': 'url', ... } }
+  const [gardenPhotoPreview, setGardenPhotoPreview] = useState(null); // Preview before confirming upload
 
   // User location (Cebu, Philippines)
   const USER_LOCATION = {
@@ -140,54 +141,61 @@ function App() {
     const file = e.target.files[0];
     if (!file) return;
 
-    setIsUploading(true);
-
     const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64Data = reader.result;
-      
-      // Upload to GitHub
-      const folderName = toFolderName(gardenProgressModal.location);
-      const months = getGardenProgressMonths();
-      const currentMonth = months[gardenProgressModal.monthIndex];
-      const monthFormatted = currentMonth.toLowerCase().replace(' ', '-'); // 'feb-2026'
-      
-      try {
-        const photoUrl = await uploadGardenPhotoToGitHub(
-          folderName,
-          monthFormatted,
-          base64Data
-        );
-
-        if (photoUrl) {
-          // Update garden progress data
-          setGardenProgressData(prev => ({
-            ...prev,
-            [folderName]: {
-              ...(prev[folderName] || {}),
-              [currentMonth]: photoUrl
-            }
-          }));
-
-          // Save to gardenprogress.csv
-          await saveGardenProgressToGitHub({
-            ...gardenProgressData,
-            [folderName]: {
-              ...(gardenProgressData[folderName] || {}),
-              [currentMonth]: photoUrl
-            }
-          });
-
-          console.log('✅ Garden photo uploaded:', photoUrl);
-        }
-      } catch (error) {
-        console.error('❌ Error uploading garden photo:', error);
-        alert('Failed to upload photo');
-      }
-
-      setIsUploading(false);
+    reader.onloadend = () => {
+      setGardenPhotoPreview(reader.result);
     };
     reader.readAsDataURL(file);
+  };
+
+  // Confirm and upload garden photo
+  const handleConfirmGardenPhoto = async () => {
+    if (!gardenPhotoPreview) return;
+
+    setIsUploading(true);
+
+    const folderName = toFolderName(gardenProgressModal.location);
+    const months = getGardenProgressMonths();
+    const currentMonth = months[gardenProgressModal.monthIndex];
+    const monthFormatted = currentMonth.toLowerCase().replace(' ', '-'); // 'feb-2026'
+    
+    try {
+      const photoUrl = await uploadGardenPhotoToGitHub(
+        folderName,
+        monthFormatted,
+        gardenPhotoPreview
+      );
+
+      if (photoUrl) {
+        // Update garden progress data
+        const updatedData = {
+          ...gardenProgressData,
+          [folderName]: {
+            ...(gardenProgressData[folderName] || {}),
+            [currentMonth]: photoUrl
+          }
+        };
+        
+        setGardenProgressData(updatedData);
+
+        // Save to gardenprogress.csv
+        await saveGardenProgressToGitHub(updatedData);
+
+        console.log('✅ Garden photo uploaded:', photoUrl);
+        setGardenPhotoPreview(null);
+        setGardenProgressModal(null);
+      }
+    } catch (error) {
+      console.error('❌ Error uploading garden photo:', error);
+      alert('Failed to upload photo');
+    }
+
+    setIsUploading(false);
+  };
+
+  // Cancel garden photo
+  const handleCancelGardenPhoto = () => {
+    setGardenPhotoPreview(null);
   };
 
   // Upload garden photo to GitHub
@@ -212,7 +220,8 @@ function App() {
 
       // Find next version number
       const versionNumber = existingPhotos.length + 1;
-      const fileName = `${folderName}_${monthFormatted}_v${versionNumber}.jpg`;
+      const paddedVersion = String(versionNumber).padStart(2, '0');
+      const fileName = `${folderName}_${monthFormatted}_${paddedVersion}.jpg`;
       const filePath = `${folderName}/${fileName}`;
 
       console.log(`📸 Uploading garden photo: ${fileName}`);
@@ -243,17 +252,27 @@ function App() {
     try {
       console.log('Saving garden progress to GitHub');
       
-      // Create CSV content
-      const headers = 'Location,Month,Photo URL';
+      const months = getGardenProgressMonths();
+      
+      // Create CSV content - columns: Location, Oct-2025, Nov-2025, Dec-2025, Jan-2026, Feb-2026
+      const headers = `Location,${months.join(',')}`;
       const rows = [];
       
-      Object.keys(data).forEach(location => {
-        Object.keys(data[location]).forEach(month => {
-          rows.push(`${location},${month},${data[location][month]}`);
+      gardenLocations.forEach(location => {
+        const folderName = toFolderName(location);
+        const rowData = [location];
+        
+        months.forEach(month => {
+          const photoUrl = data[folderName]?.[month];
+          rowData.push(photoUrl || '-');
         });
+        
+        rows.push(rowData.join(','));
       });
       
       const csvContent = [headers, ...rows].join('\n');
+
+      console.log('CSV Preview:', csvContent);
 
       // Check if file exists
       let sha = null;
@@ -1367,7 +1386,10 @@ function App() {
       {gardenProgressModal && (
         <div 
           className="lightbox-overlay" 
-          onClick={() => setGardenProgressModal(null)}
+          onClick={() => {
+            setGardenProgressModal(null);
+            setGardenPhotoPreview(null);
+          }}
         >
           <div 
             className="garden-progress-modal" 
@@ -1375,7 +1397,10 @@ function App() {
           >
             <button 
               className="lightbox-close" 
-              onClick={() => setGardenProgressModal(null)}
+              onClick={() => {
+                setGardenProgressModal(null);
+                setGardenPhotoPreview(null);
+              }}
               style={{ top: '10px', right: '10px' }}
             >
               ×
@@ -1391,13 +1416,67 @@ function App() {
               display: 'flex', 
               justifyContent: 'center',
               alignItems: 'center',
-              minHeight: '400px'
+              minHeight: '400px',
+              flexDirection: 'column'
             }}>
               {(() => {
                 const folderName = toFolderName(gardenProgressModal.location);
                 const currentMonth = getGardenProgressMonths()[gardenProgressModal.monthIndex];
                 const photoUrl = gardenProgressData[folderName]?.[currentMonth];
                 
+                // Show preview if photo was just taken
+                if (gardenPhotoPreview) {
+                  return (
+                    <div style={{ textAlign: 'center' }}>
+                      <img 
+                        src={gardenPhotoPreview}
+                        alt="Preview"
+                        style={{
+                          maxWidth: '600px',
+                          maxHeight: '600px',
+                          objectFit: 'contain',
+                          borderRadius: '8px',
+                          border: '2px solid white',
+                          marginBottom: '20px'
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
+                        <button
+                          onClick={handleCancelGardenPhoto}
+                          disabled={isUploading}
+                          style={{
+                            padding: '10px 30px',
+                            backgroundColor: '#666',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '1rem'
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleConfirmGardenPhoto}
+                          disabled={isUploading}
+                          style={{
+                            padding: '10px 30px',
+                            backgroundColor: '#2e7d32',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '1rem'
+                          }}
+                        >
+                          {isUploading ? 'Uploading...' : 'OK'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // Show existing photo or take picture button
                 if (photoUrl) {
                   return (
                     <div style={{ textAlign: 'center' }}>
