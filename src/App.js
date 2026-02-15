@@ -100,13 +100,14 @@ function App() {
     return '☁️'; // Default
   };
 
-  // Helper function to generate 5 months starting from current month
+  // Helper function to generate 5 months ending at current month (backwards)
   const getGardenProgressMonths = () => {
     const months = [];
     const today = new Date();
     
-    for (let i = 0; i < 5; i++) {
-      const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    // Start from 4 months ago and go to current month
+    for (let i = 4; i >= 0; i--) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
       const monthStr = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       months.push(monthStr);
     }
@@ -1019,30 +1020,62 @@ function App() {
               <tr>
                 <th>Location</th>
                 {getGardenProgressMonths().map((month, index) => (
-                  <th key={index}>{month}</th>
+                  <th key={index} style={{ textAlign: 'center' }}>{month}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {gardenLocations.map((location, index) => (
-                <tr key={index}>
-                  <td>
-                    <span 
-                      onClick={() => handleGardenLocationClick(location)}
-                      style={{ 
-                        cursor: 'pointer', 
-                        textDecoration: 'underline',
-                        color: '#2e7d32'
-                      }}
-                    >
-                      {location}
-                    </span>
-                  </td>
-                  {getGardenProgressMonths().map((month, monthIndex) => (
-                    <td key={monthIndex}></td>
-                  ))}
-                </tr>
-              ))}
+              {gardenLocations.map((location, index) => {
+                const folderName = toFolderName(location);
+                return (
+                  <tr key={index}>
+                    <td>
+                      <span 
+                        onClick={() => handleGardenLocationClick(location)}
+                        style={{ 
+                          cursor: 'pointer', 
+                          textDecoration: 'underline',
+                          color: '#2e7d32'
+                        }}
+                      >
+                        {location}
+                      </span>
+                    </td>
+                    {getGardenProgressMonths().map((month, monthIndex) => {
+                      const photoUrl = gardenProgressData[folderName]?.[month];
+                      return (
+                        <td key={monthIndex} style={{ textAlign: 'center' }}>
+                          {photoUrl ? (
+                            <img
+                              src={photoUrl}
+                              alt={`${location} - ${month}`}
+                              style={{ 
+                                width: '40px', 
+                                height: '40px', 
+                                objectFit: 'cover', 
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => setGardenProgressModal({ location, monthIndex })}
+                            />
+                          ) : (
+                            <span 
+                              onClick={() => setGardenProgressModal({ location, monthIndex })}
+                              style={{ 
+                                cursor: 'pointer',
+                                color: '#999',
+                                fontSize: '0.8rem'
+                              }}
+                            >
+                              -
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -1367,6 +1400,7 @@ function App() {
             <button 
               className="lightbox-close" 
               onClick={() => setGardenProgressModal(null)}
+              style={{ top: '10px', right: '10px' }}
             >
               ×
             </button>
@@ -1432,17 +1466,48 @@ function App() {
                 
                 if (photoUrl) {
                   return (
-                    <img 
-                      src={photoUrl}
-                      alt={`${gardenProgressModal.location} - ${currentMonth}`}
-                      style={{
-                        maxWidth: '600px',
-                        maxHeight: '600px',
-                        objectFit: 'contain',
-                        borderRadius: '8px',
-                        border: '2px solid white'
-                      }}
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <img 
+                        src={photoUrl}
+                        alt={`${gardenProgressModal.location} - ${currentMonth}`}
+                        style={{
+                          maxWidth: '600px',
+                          maxHeight: '600px',
+                          objectFit: 'contain',
+                          borderRadius: '8px',
+                          border: '2px solid white'
+                        }}
+                      />
+                      <div style={{ 
+                        textAlign: 'center', 
+                        marginTop: '20px',
+                        color: 'white'
+                      }}>
+                        <label 
+                          htmlFor="garden-photo-update"
+                          style={{
+                            display: 'inline-block',
+                            padding: '10px 20px',
+                            backgroundColor: '#2e7d32',
+                            color: 'white',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            border: '2px solid white'
+                          }}
+                        >
+                          📸 Update Photo
+                        </label>
+                        <input
+                          id="garden-photo-update"
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleGardenPhotoCapture}
+                          style={{ display: 'none' }}
+                        />
+                      </div>
+                    </div>
                   );
                 } else {
                   return (
